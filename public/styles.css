@@ -661,6 +661,11 @@ code { font-family: var(--mono); font-size: .88em; color: var(--gold); }
 .toast--error { --accent: var(--rose); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(12px); } }
 
+.account-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+}
+
 /* ---------- адаптив ---------- */
 
 @media (max-width: 699px) {
@@ -670,6 +675,8 @@ code { font-family: var(--mono); font-size: .88em; color: var(--gold); }
   .brand__text { display: none; }
   .topbar__actions .btn span { display: none; }
   .topbar__actions .btn { padding: 8px 12px; }
+  /* в узкой шапке места нет — выход живёт в Настройках */
+  .topbar__logout { display: none; }
 }
 
 @media (min-width: 700px) {

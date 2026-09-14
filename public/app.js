@@ -121,7 +121,10 @@ function renderAuthSlot() {
       ${icon.mail}${unread ? `<span class="badge-dot">${unread > 99 ? '99+' : unread}</span>` : ''}
     </button>
     <button class="icon-btn" data-go="#/u/${encodeURIComponent(state.me.username)}"
-            aria-label="Профиль" style="width:auto;padding:2px;border:0">${avatar(state.me)}</button>`;
+            aria-label="Профиль" style="width:auto;padding:2px;border:0">${avatar(state.me)}</button>
+    <button class="icon-btn topbar__logout" data-act="logout" aria-label="Выйти из аккаунта" title="Выйти">
+      <svg viewBox="0 0 24 24"><path d="M15 17l5-5-5-5M20 12H9M12 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6"/></svg>
+    </button>`;
 }
 
 function renderRails() {
@@ -515,6 +518,24 @@ function renderSettings() {
     </section>
 
     <section class="card">
+      <h2 class="panel__title">Аккаунт</h2>
+      <div class="account-row">
+        <div class="table__user ${accentClass(me.accent)}">
+          ${avatar(me)}
+          <div>
+            <div style="font-weight:600">${esc(me.username)}</div>
+            <div class="field__hint">${esc(me.role === 'admin' ? 'админ'
+              : me.role === 'moderator' ? 'модератор' : 'игрок')} · с ${new Date(me.createdAt).toLocaleDateString('ru')}</div>
+          </div>
+        </div>
+        <button class="btn btn--danger" data-act="logout">
+          <svg viewBox="0 0 24 24"><path d="M15 17l5-5-5-5M20 12H9M12 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6"/></svg>
+          Выйти
+        </button>
+      </div>
+    </section>
+
+    <section class="card">
       <h2 class="panel__title">Смена пароля</h2>
       <form id="password-form">
         <div class="form-error" hidden></div>
@@ -860,6 +881,7 @@ document.addEventListener('click', async (event) => {
   if (act === 'compose') return openComposer();
   if (act === 'back') return history.length > 1 ? history.back() : go(feedHash({ channel: 'all' }));
   if (act === 'logout') {
+    if (!confirm('Выйти из аккаунта?')) return;
     await api('/auth/logout', { method: 'POST' });
     state.me = null;
     toast('Вышли. До скорого.');
