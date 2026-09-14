@@ -160,5 +160,8 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {
     persistNow();
     server.close(() => process.exit(0));
+    // keep-alive соединения не дают close() завершиться сами по себе
+    server.closeAllConnections?.();
+    setTimeout(() => process.exit(0), 800).unref();
   });
 }
