@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import * as api from './lib/api.js';
 import { HttpError } from './lib/api.js';
 import { readSession, purgeExpiredSessions } from './lib/auth.js';
+import { hit, clear as clearRate } from './lib/rate.js';
 import { close as closeDb } from './lib/db.js';
 import { CHANNELS, LANES, ROLES, RANKS, HEROES, FEATS } from './lib/mlbb.js';
 import { seedIfEmpty } from './seed.js';
@@ -29,7 +30,7 @@ function json(res, status, payload, headers = {}) {
     'content-type': 'application/json; charset=utf-8',
     'content-length': Buffer.byteLength(body),
     'cache-control': 'no-store',
-    'x-content-type-options': 'nosniff',
+    ...SECURITY_HEADERS,
     ...headers,
   });
   res.end(body);
@@ -41,9 +42,31 @@ const readCookies = (req) => Object.fromEntries(
     return [p.slice(0, i), decodeURIComponent(p.slice(i + 1))];
   }));
 
+// за HTTPS-прокси ставим Secure: NEONHUB_SECURE=1
+const SECURE = process.env.NEONHUB_SECURE === '1' ? '; Secure' : '';
 const sessionCookie = (token) =>
-  `nh_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 30}`;
-const clearCookie = () => 'nh_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0';
+  `nh_session=${token}; Path=/; HttpOnly; SameSite=Lax${SECURE}; Max-Age=${60 * 60 * 24 * 30}`;
+const clearCookie = () => `nh_session=; Path=/; HttpOnly; SameSite=Lax${SECURE}; Max-Age=0`;
+
+/* Заголовки безопасности. CSP запрещает inline-скрипты и чужие источники,
+   frame-ancestors 'none' закрывает кликджекинг. Шрифты Google разрешены явно. */
+const SECURITY_HEADERS = {
+  'content-security-policy': [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data:",
+    "connect-src 'self'",
+    "form-action 'self'",
+    "base-uri 'none'",
+    "frame-ancestors 'none'",
+  ].join('; '),
+  'x-frame-options': 'DENY',
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'same-origin',
+  'permissions-policy': 'geolocation=(), camera=(), microphone=()',
+};
 
 async function readBody(req) {
   const chunks = [];
@@ -72,6 +95,7 @@ async function serveStatic(req, res, pathname) {
     res.writeHead(200, {
       'content-type': MIME[extname(file)] || 'application/octet-stream',
       'cache-control': file.endsWith('.html') ? 'no-cache' : 'public, max-age=300',
+      ...SECURITY_HEADERS,
     });
     res.end(body);
   } catch {
@@ -90,6 +114,21 @@ const META = {
   feats: FEATS,
 };
 
+/** Ключ лимита: для гостя — адрес, для своего — id, чтобы не били по общему NAT. */
+function limitKey(req, viewer) {
+  if (viewer) return `u${viewer.id}`;
+  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  return forwarded || req.socket.remoteAddress || 'unknown';
+}
+
+function guard(req, res, viewer, action) {
+  const { ok, retryAfter } = hit(action, limitKey(req, viewer));
+  if (ok) return true;
+  json(res, 429, { error: `Слишком часто. Попробуй через ${retryAfter} с.` },
+    { 'retry-after': String(retryAfter) });
+  return false;
+}
+
 async function route(req, res, url, viewer, token) {
   const segments = url.pathname.split('/').filter(Boolean); // ['api', section, id, action, ...]
   const [, section, id, action] = segments;
@@ -100,12 +139,19 @@ async function route(req, res, url, viewer, token) {
 
   if (section === 'auth') {
     if (method === 'POST' && id === 'register') {
+      if (!guard(req, res, viewer, 'register')) return;
       const { user, token: fresh } = api.register(await readBody(req));
       return json(res, 201, api.publicUser(user, user), { 'set-cookie': sessionCookie(fresh) });
     }
     if (method === 'POST' && id === 'login') {
+      if (!guard(req, res, viewer, 'login')) return;
       const { user, token: fresh } = api.login(await readBody(req));
+      clearRate('login', limitKey(req, viewer));   // успешный вход снимает счётчик
       return json(res, 200, api.publicUser(user, user), { 'set-cookie': sessionCookie(fresh) });
+    }
+    if (method === 'POST' && id === 'logout-all') {
+      api.logoutEverywhere(viewer);
+      return json(res, 200, { ok: true }, { 'set-cookie': clearCookie() });
     }
     if (method === 'POST' && id === 'logout') {
       api.logout(token);
@@ -116,9 +162,17 @@ async function route(req, res, url, viewer, token) {
   if (section === 'me') {
     if (method === 'GET') {
       if (!viewer) return json(res, 200, null);
-      return json(res, 200, { ...api.publicUser(viewer, viewer), unread: api.unreadCount(viewer) });
+      return json(res, 200, {
+        ...api.publicUser(viewer, viewer),
+        unread: api.unreadCount(viewer),
+        unreadNotifications: api.unreadNotifications(viewer),
+      });
     }
     if (method === 'PATCH') return json(res, 200, api.updateProfile(viewer, await readBody(req)));
+    if (method === 'DELETE' && !id) {
+      api.deleteAccount(viewer, await readBody(req));
+      return json(res, 200, { ok: true }, { 'set-cookie': clearCookie() });
+    }
     if (method === 'POST' && id === 'password') {
       const result = api.changePassword(viewer, await readBody(req));
       return json(res, 200, result, { 'set-cookie': clearCookie() });
@@ -127,23 +181,36 @@ async function route(req, res, url, viewer, token) {
 
   if (section === 'posts') {
     if (method === 'GET' && !id) return json(res, 200, api.listPosts(viewer, query));
-    if (method === 'POST' && !id) return json(res, 201, api.createPost(viewer, await readBody(req)));
+    if (method === 'POST' && !id) {
+      if (!guard(req, res, viewer, 'post')) return;
+      return json(res, 201, api.createPost(viewer, await readBody(req)));
+    }
+    if (method === 'PATCH' && id && !action) {
+      return json(res, 200, api.editPost(viewer, Number(id), await readBody(req)));
+    }
     if (method === 'GET' && id && !action) return json(res, 200, api.getPost(viewer, Number(id)));
     if (method === 'DELETE' && id && !action) return json(res, 200, api.deletePost(viewer, Number(id)));
     if (method === 'POST' && action === 'like') return json(res, 200, api.toggleLike(viewer, Number(id)));
     if (method === 'POST' && action === 'pin') return json(res, 200, api.togglePin(viewer, Number(id)));
     if (method === 'POST' && action === 'comments') {
+      if (!guard(req, res, viewer, 'comment')) return;
       return json(res, 201, api.addComment(viewer, Number(id), await readBody(req)));
     }
   }
 
-  if (section === 'comments' && method === 'DELETE' && id) {
-    return json(res, 200, api.deleteComment(viewer, Number(id)));
+  if (section === 'comments' && id) {
+    if (method === 'DELETE') return json(res, 200, api.deleteComment(viewer, Number(id)));
+    if (method === 'PATCH') return json(res, 200, api.editComment(viewer, Number(id), await readBody(req)));
+  }
+
+  if (section === 'users' && method === 'GET' && !id) {
+    return json(res, 200, api.searchUsers(query.q || '', viewer));
   }
 
   if (section === 'users' && id) {
     if (method === 'GET' && !action) return json(res, 200, api.profile(id, viewer));
     if (method === 'POST' && action === 'follow') return json(res, 200, api.toggleFollow(viewer, id));
+    if (method === 'POST' && action === 'block') return json(res, 200, api.toggleBlock(viewer, id));
     if (method === 'GET' && (action === 'followers' || action === 'following')) {
       return json(res, 200, api.followList(id, action, viewer));
     }
@@ -152,10 +219,21 @@ async function route(req, res, url, viewer, token) {
   if (section === 'messages') {
     if (method === 'GET' && !id) return json(res, 200, api.conversations(viewer));
     if (method === 'GET' && id) return json(res, 200, api.thread(viewer, id));
-    if (method === 'POST' && id) return json(res, 201, api.sendMessage(viewer, id, await readBody(req)));
+    if (method === 'POST' && id) {
+      if (!guard(req, res, viewer, 'message')) return;
+      return json(res, 201, api.sendMessage(viewer, id, await readBody(req)));
+    }
   }
 
+  if (section === 'notifications') {
+    if (method === 'GET') return json(res, 200, api.notifications(viewer));
+    if (method === 'POST' && id === 'read') return json(res, 200, api.readNotifications(viewer));
+  }
+
+  if (section === 'blocks' && method === 'GET') return json(res, 200, api.blockedList(viewer));
+
   if (section === 'reports' && method === 'POST') {
+    if (!guard(req, res, viewer, 'report')) return;
     return json(res, 201, api.report(viewer, await readBody(req)));
   }
 

@@ -8,6 +8,7 @@ const state = {
   channel: 'all',
   query: '',
   route: { name: 'feed', arg: null },
+  page: { offset: 0, items: [], total: 0, hasMore: false },
 };
 
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
@@ -85,6 +86,9 @@ const icon = {
   star: '<svg viewBox="0 0 24 24"><path d="M12 4l2.4 5 5.6.8-4 3.9 1 5.5-5-2.7-5 2.7 1-5.5-4-3.9 5.6-.8z"/></svg>',
   mail: '<svg viewBox="0 0 24 24"><path d="M3 6h18v12H3z"/><path d="M3 7l9 6 9-6"/></svg>',
   shield: '<svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6z"/></svg>',
+  bell: '<svg viewBox="0 0 24 24"><path d="M18 16V11a6 6 0 0 0-12 0v5l-2 3h16z"/><path d="M10 21h4"/></svg>',
+  pencil: '<svg viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>',
+  block: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/></svg>',
   gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></svg>',
 };
 
@@ -113,9 +117,13 @@ function renderAuthSlot() {
     return;
   }
   const unread = state.me.unread || 0;
+  const alerts = state.me.unreadNotifications || 0;
   slot.innerHTML = `
     <button class="btn btn--primary ${accentClass(state.me.accent)}" data-act="compose">
       <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Написать</span>
+    </button>
+    <button class="icon-btn" data-go="#/notifications" aria-label="Уведомления">
+      ${icon.bell}${alerts ? `<span class="badge-dot">${alerts > 99 ? '99+' : alerts}</span>` : ''}
     </button>
     <button class="icon-btn" data-go="#/dm" aria-label="Сообщения">
       ${icon.mail}${unread ? `<span class="badge-dot">${unread > 99 ? '99+' : unread}</span>` : ''}
@@ -133,6 +141,7 @@ function renderRails() {
   const nav = [
     ['#/', icon.feed, 'Лента', state.route.name === 'feed' && state.channel === 'all'],
     ...(state.me ? [['#/following', icon.star, 'Подписки', state.route.name === 'following']] : []),
+    ...(state.me ? [['#/notifications', icon.bell, 'Уведомления', state.route.name === 'notifications', state.me.unreadNotifications || 0]] : []),
     ...(state.me ? [['#/dm', icon.mail, 'Сообщения', state.route.name === 'dm', unread]] : []),
     ...(state.me ? [['#/settings', icon.gear, 'Настройки', state.route.name === 'settings']] : []),
     ...(staff ? [['#/admin', icon.shield, 'Панель', state.route.name === 'admin']] : []),
@@ -204,6 +213,7 @@ const postHead = (post) => `
       <div class="post__byline">
         ${rankBadge(post.author)}
         <span class="post__time">${timeAgo(post.createdAt)}</span>
+        ${post.editedAt ? '<span class="post__edited">изменено</span>' : ''}
       </div>
     </div>
     <button class="post__channel" data-channel="${esc(post.channel)}">${esc(post.channelName)}</button>
@@ -234,7 +244,8 @@ const postFoot = (post, full = false) => `
       : `<button class="action" data-open="${post.id}">${icon.reply}<span>${post.commentCount}</span></button>`}
     ${state.me && !post.mine ? `<button class="action" data-report-post="${post.id}" aria-label="Пожаловаться">${icon.flag}</button>` : ''}
     ${staffNow() ? `<button class="action action--gold ${post.pinned ? 'is-on' : ''}" data-pin="${post.id}" aria-label="Закрепить">${icon.pin}</button>` : ''}
-    ${post.canModerate ? `<button class="action action--danger" data-delete-post="${post.id}" aria-label="Удалить" style="margin-left:auto">${icon.trash}</button>` : ''}
+    ${post.mine ? `<button class="action" data-edit-post="${post.id}" aria-label="Править" style="margin-left:auto">${icon.pencil}</button>` : ''}
+    ${post.canModerate ? `<button class="action action--danger" data-delete-post="${post.id}" aria-label="Удалить" ${post.mine ? '' : 'style="margin-left:auto"'}>${icon.trash}</button>` : ''}
   </footer>`;
 
 const commentRow = (c) => `
@@ -245,8 +256,11 @@ const commentRow = (c) => `
         <button class="comment__name" data-user="${esc(c.author?.username)}">${esc(c.author?.username)}</button>
         ${roleBadge(c.author)}${rankBadge(c.author)}
         <span class="comment__time">${timeAgo(c.createdAt)}</span>
+        ${c.editedAt ? '<span class="post__edited">изменено</span>' : ''}
+        ${c.mine ? `<button class="action" data-edit-comment="${c.id}"
+           aria-label="Править ответ" style="margin-left:auto;padding:2px 7px">${icon.pencil}</button>` : ''}
         ${c.canModerate ? `<button class="action action--danger" data-delete-comment="${c.id}"
-           aria-label="Удалить ответ" style="margin-left:auto;padding:2px 7px">${icon.trash}</button>` : ''}
+           aria-label="Удалить ответ" ${c.mine ? 'style="padding:2px 7px"' : 'style="margin-left:auto;padding:2px 7px"'}>${icon.trash}</button>` : ''}
       </div>
       <p class="comment__body">${esc(c.body)}</p>
     </div>
@@ -277,8 +291,15 @@ async function renderFeed() {
   if (state.query) params.set('q', state.query);
   if (state.route.name === 'following') params.set('feed', 'following');
 
-  const posts = await api(`/posts?${params}`);
+  params.set('limit', '30');
+  params.set('offset', String(state.page.offset));
+
+  const page = await api(`/posts?${params}`);
+  const posts = state.page.offset > 0 ? [...state.page.items, ...page.items] : page.items;
+  state.page = { offset: state.page.offset, items: posts, total: page.total, hasMore: page.hasMore };
+
   const channelName = state.stats?.channels.find((c) => c.id === state.channel)?.name;
+  const people = state.query ? await api(`/users?q=${encodeURIComponent(state.query)}`).catch(() => []) : [];
 
   let heading = 'Лента';
   if (state.route.name === 'following') heading = '<em>Подписки</em>';
@@ -287,15 +308,26 @@ async function renderFeed() {
 
   view.innerHTML = `
     <div class="content-head"><h1>${heading}</h1>
-      <span class="content-head__meta">${posts.length} ${plural(posts.length, ['пост', 'поста', 'постов'])}</span>
+      <span class="content-head__meta">${page.total} ${plural(page.total, ['пост', 'поста', 'постов'])}</span>
     </div>
     ${composerBar()}
+    ${people.length ? `
+      <section class="card">
+        <h2 class="panel__title">Игроки по запросу</h2>
+        <ul class="leaders">${people.map((u) => `
+          <li><button class="leader" data-user="${esc(u.username)}">
+            ${avatar(u, 'sm')}<span class="leader__name">${esc(u.username)}</span>
+            ${rankBadge(u)}<span class="leader__karma">${u.karma} ♥</span>
+          </button></li>`).join('')}</ul>
+      </section>` : ''}
     ${posts.length ? posts.map(postCard).join('')
       : emptyState(
           state.route.name === 'following' ? 'В подписках пусто' : 'Здесь пока тихо',
           state.route.name === 'following'
             ? 'Подпишись на игроков — их посты будут собираться здесь.'
-            : 'Напиши первый пост: разбор меты, гайд или зов в каточку.')}`;
+            : 'Напиши первый пост: разбор меты, гайд или зов в каточку.')}
+    ${page.hasMore ? `<button class="btn btn--block" id="load-more">Показать ещё
+      (осталось ${page.total - posts.length})</button>` : ''}`;
 }
 
 async function renderPost(id) {
@@ -379,7 +411,8 @@ async function renderProfile(username) {
                 ${user.followed ? 'Отписаться' : 'Подписаться'}
               </button>
               <button class="btn btn--sm" data-go="#/dm/${encodeURIComponent(user.username)}">Написать</button>
-              <button class="btn btn--sm" data-report-user="${user.id}">Пожаловаться</button>`
+              <button class="btn btn--sm" data-report-user="${user.id}">Пожаловаться</button>
+              <button class="btn btn--sm btn--danger" data-block="${esc(user.username)}">Заблокировать</button>`
             : '<button class="btn btn--sm btn--primary" data-act="login">Войти, чтобы подписаться</button>'}
         </div>
       </div>
@@ -387,6 +420,41 @@ async function renderProfile(username) {
 
     <div class="content-head"><h1 style="font-size:17px">Посты</h1></div>
     ${posts.length ? posts.map(postCard).join('') : emptyState('Постов нет', 'Игрок пока молчит.')}`;
+}
+
+async function renderNotifications() {
+  if (!state.me) { view.innerHTML = emptyState('Нужно войти', 'Уведомления только для своих.'); return; }
+  view.innerHTML = '<div class="skeleton"></div>';
+  const items = await api('/notifications');
+
+  const word = { like: 'оценил пост', comment: 'ответил в посте', follow: 'подписался на тебя', mention: 'упомянул тебя' };
+  view.innerHTML = `
+    <div class="content-head"><h1><em>Уведомления</em></h1>
+      <span class="content-head__meta">${items.length}</span>
+    </div>
+    <section class="card">
+      ${items.length ? `<div class="dialogs">${items.map((n) => `
+        <button class="dialog ${n.read ? '' : 'is-unread'} ${accentClass(n.actor.accent)}"
+                ${n.postId ? `data-open="${n.postId}"` : `data-user="${esc(n.actor.username)}"`}>
+          ${avatar(n.actor)}
+          <div class="dialog__main">
+            <div class="post__byline">
+              <span class="dialog__name">${esc(n.actor.username)}</span>
+              <span style="color:var(--text-dim);font-size:13px">${word[n.kind] || n.kind}</span>
+            </div>
+            <div class="dialog__last">${esc(n.postTitle || n.preview || '')}</div>
+          </div>
+          <div class="dialog__meta"><span class="dialog__time">${timeAgo(n.createdAt)}</span></div>
+        </button>`).join('')}</div>`
+        : '<p class="empty">Пока пусто. Лайки, ответы и подписки будут появляться здесь.</p>'}
+    </section>`;
+
+  if (items.some((n) => !n.read)) {
+    await api('/notifications/read', { method: 'POST' });
+    state.me.unreadNotifications = 0;
+    renderAuthSlot();
+    renderRails();
+  }
 }
 
 async function renderDialogs() {
@@ -528,10 +596,26 @@ function renderSettings() {
               : me.role === 'moderator' ? 'модератор' : 'игрок')} · с ${new Date(me.createdAt).toLocaleDateString('ru')}</div>
           </div>
         </div>
-        <button class="btn btn--danger" data-act="logout">
-          <svg viewBox="0 0 24 24"><path d="M15 17l5-5-5-5M20 12H9M12 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6"/></svg>
-          Выйти
-        </button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" data-act="logout-all" title="Разлогинит и телефон, и компьютер">
+            Выйти отовсюду
+          </button>
+          <button class="btn btn--danger" data-act="logout">
+            <svg viewBox="0 0 24 24"><path d="M15 17l5-5-5-5M20 12H9M12 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6"/></svg>
+            Выйти
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="panel__title">Опасная зона</h2>
+      <div class="account-row">
+        <div>
+          <div style="font-weight:600">Удалить аккаунт</div>
+          <div class="field__hint">Вместе с постами, ответами и перепиской. Без возврата.</div>
+        </div>
+        <button class="btn btn--danger" data-act="delete-account">Удалить</button>
       </div>
     </section>
 
@@ -745,6 +829,65 @@ function openComposer() {
   sync();
 }
 
+function openEditor(post) {
+  const { heroes = [], feats = {} } = state.meta || {};
+  openModal('Правка <em>поста</em>', `
+    <form id="edit-post-form" data-id="${post.id}">
+      <div class="form-error" hidden></div>
+      <div class="field"><label for="edit-title">Заголовок</label>
+        <input class="input" id="edit-title" name="title" maxlength="120" required
+               value="${esc(post.title)}"></div>
+      <div class="field"><label for="edit-body">Текст</label>
+        <textarea class="textarea" id="edit-body" name="body" maxlength="5000" required>${esc(post.body)}</textarea></div>
+      <div class="form-row">
+        <div class="field"><label for="edit-hero">Герой</label>
+          <select class="select" id="edit-hero" name="hero">
+            <option value="">— без героя —</option>
+            ${heroes.map((h) => `<option value="${esc(h.name)}" ${h.name === post.hero ? 'selected' : ''}>${esc(h.name)}</option>`).join('')}
+          </select></div>
+        <div class="field"><label for="edit-tags">Теги</label>
+          <input class="input" id="edit-tags" name="tags" value="${esc(post.tags.join(', '))}"></div>
+      </div>
+      <div class="field"><label for="edit-feat">Отметка</label>
+        <select class="select" id="edit-feat" name="feat">
+          <option value="">— без отметки —</option>
+          ${Object.entries(feats).map(([id, f]) => `<option value="${id}" ${id === post.feat ? 'selected' : ''}>${esc(f.name)}</option>`).join('')}
+        </select></div>
+      <div class="form-foot"><span class="hint">под постом появится пометка «изменено»</span>
+        <button class="btn" type="button" data-close>Отмена</button>
+        <button class="btn btn--primary" type="submit">Сохранить</button>
+      </div>
+    </form>`);
+}
+
+function openCommentEditor(id, current) {
+  openModal('Правка <em>ответа</em>', `
+    <form id="edit-comment-form" data-id="${id}">
+      <div class="form-error" hidden></div>
+      <div class="field"><label for="edit-comment-body">Текст</label>
+        <textarea class="textarea" id="edit-comment-body" name="body" maxlength="1500" required>${esc(current)}</textarea></div>
+      <div class="form-foot">
+        <button class="btn" type="button" data-close>Отмена</button>
+        <button class="btn btn--primary" type="submit">Сохранить</button>
+      </div>
+    </form>`);
+}
+
+function openDeleteAccount() {
+  openModal('Удаление <em>аккаунта</em>', `
+    <form id="delete-account-form">
+      <div class="form-error" hidden></div>
+      <p class="modal__lead">Уйдут посты, ответы, лайки и вся переписка. Это навсегда,
+        восстановить нечем — резервных копий и почты для восстановления тут нет.</p>
+      <div class="field"><label for="del-pass">Подтверди паролем</label>
+        <input class="input" id="del-pass" name="password" type="password" autocomplete="current-password" required></div>
+      <div class="form-foot">
+        <button class="btn" type="button" data-close>Отмена</button>
+        <button class="btn btn--danger" type="submit">Удалить навсегда</button>
+      </div>
+    </form>`);
+}
+
 function openReport(targetType, targetId) {
   if (!state.me) return openAuth('login');
   openModal('Пожаловаться', `
@@ -798,6 +941,7 @@ function parseRoute() {
   if (parts[0] === 'dm') return parts[1]
     ? { name: 'chat', arg: decodeURIComponent(parts[1]) }
     : { name: 'dm', arg: null };
+  if (parts[0] === 'notifications') return { name: 'notifications', arg: null };
   if (parts[0] === 'settings') return { name: 'settings', arg: null };
   if (parts[0] === 'admin') return { name: 'admin', arg: null };
   if (parts[0] === 'following') return { name: 'following', arg: null };
@@ -807,7 +951,10 @@ function parseRoute() {
 }
 
 async function router() {
+  const previous = `${state.route.name}:${state.route.arg}:${state.channel}:${state.query}:${state.sort}`;
   state.route = parseRoute();
+  const current = `${state.route.name}:${state.route.arg}:${state.channel}:${state.query}:${state.sort}`;
+  if (previous !== current) state.page = { offset: 0, items: [], total: 0, hasMore: false };
   $('#rail-left').classList.remove('is-open');
   window.scrollTo({ top: 0, behavior: 'instant' });
 
@@ -815,6 +962,7 @@ async function router() {
     switch (state.route.name) {
       case 'post': await renderPost(state.route.arg); break;
       case 'profile': await renderProfile(state.route.arg); break;
+      case 'notifications': await renderNotifications(); break;
       case 'dm': await renderDialogs(); break;
       case 'chat': await renderChat(state.route.arg); break;
       case 'settings': renderSettings(); break;
@@ -880,6 +1028,14 @@ document.addEventListener('click', async (event) => {
   if (act === 'register') return openAuth('register');
   if (act === 'compose') return openComposer();
   if (act === 'back') return history.length > 1 ? history.back() : go(feedHash({ channel: 'all' }));
+  if (act === 'delete-account') return openDeleteAccount();
+  if (act === 'logout-all') {
+    if (!confirm('Выйти на всех устройствах? Придётся входить заново везде.')) return;
+    await api('/auth/logout-all', { method: 'POST' });
+    state.me = null;
+    toast('Сессии сброшены везде');
+    return go('#/');
+  }
   if (act === 'logout') {
     if (!confirm('Выйти из аккаунта?')) return;
     await api('/auth/logout', { method: 'POST' });
@@ -913,6 +1069,38 @@ document.addEventListener('click', async (event) => {
       setTimeout(() => like.classList.remove('action--pulse'), 420);
       $('span', like).textContent = result.likes;
       refreshStats();
+    } catch (err) { toast(err.message, 'error'); }
+    return;
+  }
+
+  if (near('#load-more')) {
+    state.page.offset += 30;
+    return renderFeed();
+  }
+
+  const editPost = near('[data-edit-post]');
+  if (editPost) {
+    try {
+      const post = await api(`/posts/${editPost.dataset.editPost}`);
+      return openEditor(post);
+    } catch (err) { toast(err.message, 'error'); }
+    return;
+  }
+
+  const editComment = near('[data-edit-comment]');
+  if (editComment) {
+    const node = editComment.closest('[data-comment]');
+    const current = $('.comment__body', node)?.textContent || '';
+    return openCommentEditor(editComment.dataset.editComment, current);
+  }
+
+  const block = near('[data-block]');
+  if (block) {
+    if (!confirm('Заблокировать игрока? Переписка и подписки между вами оборвутся.')) return;
+    try {
+      const result = await api(`/users/${encodeURIComponent(block.dataset.block)}/block`, { method: 'POST' });
+      toast(result.blocked ? 'Игрок заблокирован' : 'Блокировка снята');
+      router();
     } catch (err) { toast(err.message, 'error'); }
     return;
   }
@@ -1077,6 +1265,37 @@ document.addEventListener('submit', async (event) => {
       toast('Пароль сменён — войди заново');
       go('#/');
       openAuth('login');
+    } catch (err) { showFormError(form, err.message); }
+    return;
+  }
+
+  if (form.id === 'edit-post-form') {
+    try {
+      await api(`/posts/${form.dataset.id}`, { method: 'PATCH', body: values });
+      closeModal();
+      toast('Пост обновлён');
+      router();
+    } catch (err) { showFormError(form, err.message); }
+    return;
+  }
+
+  if (form.id === 'edit-comment-form') {
+    try {
+      await api(`/comments/${form.dataset.id}`, { method: 'PATCH', body: values });
+      closeModal();
+      toast('Ответ обновлён');
+      router();
+    } catch (err) { showFormError(form, err.message); }
+    return;
+  }
+
+  if (form.id === 'delete-account-form') {
+    try {
+      await api('/me', { method: 'DELETE', body: values });
+      state.me = null;
+      closeModal();
+      toast('Аккаунт удалён');
+      go('#/');
     } catch (err) { showFormError(form, err.message); }
     return;
   }

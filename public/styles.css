@@ -710,3 +710,9 @@ code { font-family: var(--mono); font-size: .88em; color: var(--gold); }
   .fab { display: none; }
   .topbar__menu { display: none; }
 }
+
+/* пометка о правке рядом со временем */
+.post__edited {
+  font-family: var(--mono); font-size: 10.5px; color: var(--text-faint);
+  border: 1px solid var(--line); border-radius: 100px; padding: 0 6px;
+}

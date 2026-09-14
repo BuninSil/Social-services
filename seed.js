@@ -65,9 +65,9 @@ export function seedIfEmpty() {
 
   PLAYERS.forEach(([username, role, hero, lane, rankId, bio, status, accent, gameId, winRate], i) => {
     const result = run(`
-      INSERT INTO users(username, password, role, bio, status, accent, hero, lane, rank_id, game_id, win_rate, created_at)
-      VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      username, password, role, bio, status, accent, hero, lane, rankId, gameId, winRate,
+      INSERT INTO users(username, username_lower, password, role, bio, status, accent, hero, lane, rank_id, game_id, win_rate, created_at)
+      VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      username, username.toLowerCase(), password, role, bio, status, accent, hero, lane, rankId, gameId, winRate,
       new Date(Date.now() - (40 - i) * 86400e3).toISOString());
     ids.set(username, Number(result.lastInsertRowid));
   });
