@@ -23,15 +23,17 @@ const accentClass = (n) => `a${Number(n) || 0}`;
 function timeAgo(iso) {
   const ms = Date.parse(iso);
   if (!isFinite(ms)) return 'недавно';
-  const diff = (Date.now() - ms) / 1000;
-  if (diff < 60) return 'только что';
-  const steps = [[60, 'мин'], [24, 'ч'], [7, 'д'], [4.35, 'нед'], [12, 'мес']];
-  let value = diff / 60, label = 'мин';
-  for (const [step, next] of steps.slice(1)) {
-    if (value < step) break;
-    value /= step; label = next;
-  }
-  return `${Math.floor(value)} ${label} назад`;
+  const minutes = (Date.now() - ms) / 60000;
+  if (minutes < 1) return 'только что';
+  if (minutes < 60) return `${Math.floor(minutes)} мин назад`;
+  const hours = minutes / 60;
+  if (hours < 24) return `${Math.floor(hours)} ч назад`;
+  const days = hours / 24;
+  if (days < 7) return `${Math.floor(days)} д назад`;
+  if (days < 30.4) return `${Math.floor(days / 7)} нед назад`;
+  const months = days / 30.4;
+  if (months < 12) return `${Math.floor(months)} мес назад`;
+  return `${Math.floor(months / 12)} г назад`;
 }
 
 const clock = (iso) => {
