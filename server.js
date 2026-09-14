@@ -4,7 +4,9 @@ import { extname, join, normalize, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as api from './lib/api.js';
 import { HttpError } from './lib/api.js';
-import { readSession, persistNow, data } from './lib/store.js';
+import { readSession, purgeExpiredSessions } from './lib/auth.js';
+import { close as closeDb } from './lib/db.js';
+import { CHANNELS, LANES, ROLES, RANKS, HEROES, FEATS } from './lib/mlbb.js';
 import { seedIfEmpty } from './seed.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -17,33 +19,27 @@ const MIME = {
   '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon',
   '.json': 'application/json; charset=utf-8',
   '.woff2': 'font/woff2',
 };
 
-const json = (res, status, payload, headers = {}) => {
+function json(res, status, payload, headers = {}) {
   const body = JSON.stringify(payload);
   res.writeHead(status, {
     'content-type': 'application/json; charset=utf-8',
     'content-length': Buffer.byteLength(body),
     'cache-control': 'no-store',
+    'x-content-type-options': 'nosniff',
     ...headers,
   });
   res.end(body);
-};
-
-function readCookies(req) {
-  return Object.fromEntries(
-    (req.headers.cookie || '')
-      .split(';')
-      .map((p) => p.trim())
-      .filter(Boolean)
-      .map((p) => {
-        const i = p.indexOf('=');
-        return [p.slice(0, i), decodeURIComponent(p.slice(i + 1))];
-      }));
 }
+
+const readCookies = (req) => Object.fromEntries(
+  (req.headers.cookie || '').split(';').map((p) => p.trim()).filter(Boolean).map((p) => {
+    const i = p.indexOf('=');
+    return [p.slice(0, i), decodeURIComponent(p.slice(i + 1))];
+  }));
 
 const sessionCookie = (token) =>
   `nh_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 30}`;
@@ -69,7 +65,7 @@ async function serveStatic(req, res, pathname) {
     const info = await stat(file);
     if (info.isDirectory()) file = join(file, 'index.html');
   } catch {
-    file = join(PUBLIC, 'index.html'); // SPA fallback: любой путь отдаёт приложение
+    file = join(PUBLIC, 'index.html'); // SPA-фолбэк
   }
   try {
     const body = await readFile(file);
@@ -84,21 +80,32 @@ async function serveStatic(req, res, pathname) {
   }
 }
 
+/** Справочник игры — клиент тянет его один раз при старте. */
+const META = {
+  channels: CHANNELS,
+  lanes: LANES,
+  roles: ROLES,
+  ranks: RANKS,
+  heroes: HEROES,
+  feats: FEATS,
+};
+
 async function route(req, res, url, viewer, token) {
-  const { pathname, searchParams } = url;
-  const query = Object.fromEntries(searchParams);
-  const segments = pathname.split('/').filter(Boolean); // ['api', ...]
+  const segments = url.pathname.split('/').filter(Boolean); // ['api', section, id, action, ...]
   const [, section, id, action] = segments;
+  const query = Object.fromEntries(url.searchParams);
   const method = req.method;
+
+  if (section === 'meta' && method === 'GET') return json(res, 200, META);
 
   if (section === 'auth') {
     if (method === 'POST' && id === 'register') {
-      const { user, token: t } = api.register(await readBody(req));
-      return json(res, 201, api.publicUser(user), { 'set-cookie': sessionCookie(t) });
+      const { user, token: fresh } = api.register(await readBody(req));
+      return json(res, 201, api.publicUser(user, user), { 'set-cookie': sessionCookie(fresh) });
     }
     if (method === 'POST' && id === 'login') {
-      const { user, token: t } = api.login(await readBody(req));
-      return json(res, 200, api.publicUser(user), { 'set-cookie': sessionCookie(t) });
+      const { user, token: fresh } = api.login(await readBody(req));
+      return json(res, 200, api.publicUser(user, user), { 'set-cookie': sessionCookie(fresh) });
     }
     if (method === 'POST' && id === 'logout') {
       api.logout(token);
@@ -107,38 +114,84 @@ async function route(req, res, url, viewer, token) {
   }
 
   if (section === 'me') {
-    if (method === 'GET') return json(res, 200, api.publicUser(viewer));
+    if (method === 'GET') {
+      if (!viewer) return json(res, 200, null);
+      return json(res, 200, { ...api.publicUser(viewer, viewer), unread: api.unreadCount(viewer) });
+    }
     if (method === 'PATCH') return json(res, 200, api.updateProfile(viewer, await readBody(req)));
+    if (method === 'POST' && id === 'password') {
+      const result = api.changePassword(viewer, await readBody(req));
+      return json(res, 200, result, { 'set-cookie': clearCookie() });
+    }
   }
 
   if (section === 'posts') {
     if (method === 'GET' && !id) return json(res, 200, api.listPosts(viewer, query));
     if (method === 'POST' && !id) return json(res, 201, api.createPost(viewer, await readBody(req)));
-    if (method === 'GET' && id && !action) return json(res, 200, api.getPost(viewer, id));
-    if (method === 'DELETE' && id && !action) return json(res, 200, api.deletePost(viewer, id));
-    if (method === 'POST' && action === 'like') return json(res, 200, api.toggleLike(viewer, id));
+    if (method === 'GET' && id && !action) return json(res, 200, api.getPost(viewer, Number(id)));
+    if (method === 'DELETE' && id && !action) return json(res, 200, api.deletePost(viewer, Number(id)));
+    if (method === 'POST' && action === 'like') return json(res, 200, api.toggleLike(viewer, Number(id)));
+    if (method === 'POST' && action === 'pin') return json(res, 200, api.togglePin(viewer, Number(id)));
     if (method === 'POST' && action === 'comments') {
-      return json(res, 201, api.addComment(viewer, id, await readBody(req)));
+      return json(res, 201, api.addComment(viewer, Number(id), await readBody(req)));
     }
   }
 
   if (section === 'comments' && method === 'DELETE' && id) {
-    return json(res, 200, api.deleteComment(viewer, id));
+    return json(res, 200, api.deleteComment(viewer, Number(id)));
   }
 
-  if (section === 'users' && method === 'GET' && id) return json(res, 200, api.profile(id));
-  if (section === 'stats' && method === 'GET') return json(res, 200, api.stats());
+  if (section === 'users' && id) {
+    if (method === 'GET' && !action) return json(res, 200, api.profile(id, viewer));
+    if (method === 'POST' && action === 'follow') return json(res, 200, api.toggleFollow(viewer, id));
+    if (method === 'GET' && (action === 'followers' || action === 'following')) {
+      return json(res, 200, api.followList(id, action, viewer));
+    }
+  }
+
+  if (section === 'messages') {
+    if (method === 'GET' && !id) return json(res, 200, api.conversations(viewer));
+    if (method === 'GET' && id) return json(res, 200, api.thread(viewer, id));
+    if (method === 'POST' && id) return json(res, 201, api.sendMessage(viewer, id, await readBody(req)));
+  }
+
+  if (section === 'reports' && method === 'POST') {
+    return json(res, 201, api.report(viewer, await readBody(req)));
+  }
+
+  if (section === 'admin') {
+    if (method === 'GET' && !id) return json(res, 200, api.adminOverview(viewer));
+    if (method === 'POST' && id === 'role') {
+      const body = await readBody(req);
+      return json(res, 200, api.setRole(viewer, Number(body.userId), body.role));
+    }
+    if (method === 'POST' && id === 'ban') {
+      const body = await readBody(req);
+      return json(res, 200, api.setBan(viewer, Number(body.userId), !!body.banned, body.reason));
+    }
+    if (method === 'POST' && id === 'resolve') {
+      const body = await readBody(req);
+      return json(res, 200, api.resolveReport(viewer, Number(body.reportId)));
+    }
+  }
+
+  if (section === 'stats' && method === 'GET') return json(res, 200, api.stats(viewer));
 
   throw new HttpError(404, 'Нет такого эндпоинта');
 }
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-
   if (!url.pathname.startsWith('/api/')) return serveStatic(req, res, url.pathname);
 
   const token = readCookies(req).nh_session;
   const viewer = readSession(token);
+
+  // забаненного не пускаем дальше чтения и выхода
+  if (viewer?.banned_at && !(req.method === 'GET' || url.pathname === '/api/auth/logout')) {
+    return json(res, 403, { error: `Аккаунт заблокирован: ${viewer.ban_reason || 'без указания причины'}` });
+  }
+
   try {
     await route(req, res, url, viewer, token);
   } catch (err) {
@@ -148,20 +201,19 @@ const server = createServer(async (req, res) => {
   }
 });
 
+purgeExpiredSessions();
 seedIfEmpty();
 
 server.listen(PORT, HOST, () => {
-  const db = data();
-  console.log(`\n  ▞▞ NEONHUB запущен → http://localhost:${PORT}`);
-  console.log(`     ${db.users.length} юзеров · ${db.posts.length} постов · ${db.comments.length} комментов\n`);
+  console.log(`\n  ▞▞ NEONHUB · MLBB → http://localhost:${PORT}`);
+  const s = api.stats(null);
+  console.log(`     ${s.users} игроков · ${s.posts} постов · ${s.comments} комментов\n`);
 });
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {
-    persistNow();
-    server.close(() => process.exit(0));
-    // keep-alive соединения не дают close() завершиться сами по себе
+    server.close(() => { closeDb(); process.exit(0); });
     server.closeAllConnections?.();
-    setTimeout(() => process.exit(0), 800).unref();
+    setTimeout(() => { closeDb(); process.exit(0); }, 800).unref();
   });
 }

@@ -1,72 +1,98 @@
-import { data, nextId, persistNow, hashPassword } from './lib/store.js';
+import { one, run, now } from './lib/db.js';
+import { hashPassword } from './lib/auth.js';
 
-const DEMO_USERS = [
-  ['neon', 'фронтендер, коллекционирую градиенты и чужие баги', 0],
-  ['vaporwave', 'делаю музыку в 3 ночи, сплю в 5', 2],
-  ['kernel', 'системщик. если оно не падает — значит недотестировали', 4],
-  ['glitch', 'дизайн, типографика, немного хаоса', 1],
-  ['astra', 'астрофизика и слишком длинные треды', 3],
+const PASSWORD = 'demo1234';
+
+const PLAYERS = [
+  ['Savage', 'admin',     'Ланселот',  'jungle', 'mythic_glory', 'бью первым, думаю потом', 'три Savage за сезон — и ни одного на записи', 1, 'ID 128840291 (RU)', 62],
+  ['Turtle', 'moderator', 'Тигреал',   'roam',   'mythic',       'роум, который реально роумит', 'если я не в пинге — я в тимфайте', 0, 'ID 118273645 (RU)', 58],
+  ['Retrib', 'user',      'Ю Чжун',    'exp',    'legend',       'экспа и терпение', 'один против троих — это не смелость, это фарм', 5, 'ID 992041337 (RU)', 54],
+  ['MidDiff', 'user',     'Кагура',    'mid',    'epic',         'мид по вызову', 'скилл-шоты мимо, но стильно', 2, 'ID 771122900 (RU)', 49],
+  ['GoldLane', 'user',    'Грейнджер', 'gold',   'mythic',       'фарм — тоже тактика', 'дайте мне 10 минут и я выиграю', 4, 'ID 445566781 (RU)', 61],
 ];
 
-const DEMO_POSTS = [
-  ['neon', 'Тёмная тема — это не просто инверсия цветов', 'Переключил палитру в лоб и получил серую кашу. Оказалось, в тёмной теме нужно поднимать насыщенность акцентов и ронять её у фона, иначе всё сливается. Плюс тени не работают — глубину приходится строить светом, а не темнотой.', 'design', ['ui', 'darkmode', 'css'], 4],
-  ['kernel', 'Один воркер вместо пула — и latency упал в три раза', 'Классика: пул на 16 процессов, каждый со своим коннектом к базе. Пул дрался сам с собой за соединения. Свёл до одного воркера с очередью — p99 с 840мс до 260мс. Иногда параллелизм это просто более дорогой способ ждать.', 'code', ['backend', 'perf'], 9],
-  ['vaporwave', 'Собрал луп целиком в браузере, без единого плагина', 'WebAudio + пара осцилляторов + свёрточная реверберация на импульсе из подъезда. Звучит грязно и мне нравится. Скину исходники, если кому интересно поковырять.', 'music', ['webaudio', 'lofi'], 6],
-  ['astra', 'Почему снимки чёрных дыр оранжевые, а не чёрные', 'Спойлер: цвет придуман. Радиотелескоп пишет интенсивность на 1.3 мм — это не видимый свет вообще. Оранжевый выбрали, потому что мозг читает его как «горячо». Красивая ложь в интересах интуиции.', 'science', ['space', 'eht'], 7],
-  ['glitch', 'Минимализм — это не «мало элементов»', 'Это когда каждый оставшийся элемент несёт вес. Убрал рамку — значит работу границы взял на себя отступ. Убрал подпись — значит иконка однозначна. Если после вычитания пользователь тормозит, это не минимализм, а недоделанность.', 'design', ['ux', 'minimal'], 11],
-  ['neon', 'Что вы слушаете, когда пишете код?', 'У меня два режима: дебаг — тишина, рефакторинг — что угодно с битом 120+. Стало интересно, у кого как устроено.', 'random', ['offtop'], 3],
+const POSTS = [
+  ['Savage', 'Патч порезал лес: как теперь фармить джанглеру',
+   'Ретрибуция чинит меньше, черепаха даёт меньше опыта до четвёртой минуты. Итог: классический маршрут «синий → черепаха» больше не окупается.\n\nЧто работает: забирать красного первым, идти на линию с роумом и возвращаться в лес только под черепаху. Проверил в двадцати каточках — разница по фарму к шестой минуте примерно полтора уровня в плюс.',
+   'meta', 'патч,лес,джангл', 'Ланселот', '', 3, 1],
+  ['Turtle', 'Хуфра против Лансе: почему саппорт решает больше, чем кажется',
+   'Вечная боль: враг берёт Ланселота, наш мид кричит «он неубиваемый». Неубиваемый — пока у тебя нет контроля, который ловит его в дэше.\n\nХуфра, Франко, Атлас. Второй скилл Хуфры отменяет рывок, и весь герой превращается в мишень. Это не сложно, это просто никто не пикает.',
+   'draft', 'драфт,контрпик,саппорт', 'Хуфра', '', 2, 0],
+  ['Savage', 'Savage на Ланселоте в решающей каточке за Мифическую славу',
+   'Их керри зашли впятером на нашего лорда. Я стоял в кустах с полным хп и ультой. Дальше было четырнадцать секунд, которые я пересматриваю до сих пор.\n\nЗапись не сохранилась, потому что я забыл включить повтор. Верьте на слово.',
+   'highlights', 'savage,ланселот', 'Ланселот', 'savage', 4, 0],
+  ['GoldLane', 'Грейнджер: сборка под затяжной матч, а не под ранний бурст',
+   'Все качают крит с первого айтема, а потом сливаются на двадцатой минуте, когда танки собрали броню.\n\nПопробуйте: ботинки на атакспид, потом Берсерк, а третьим — не крит, а пробивание брони. К двадцать пятой минуте вы бьёте танка так же больно, как керри.',
+   'guides', 'грейнджер,сборка,гайд', 'Грейнджер', '', 2, 0],
+  ['MidDiff', 'Ищу роума на вечер, Эпик и выше',
+   'Играю мид, нужен постоянный роум под ротации. Голосовая связь обязательна, токсики мимо.\n\nОбычно с восьми вечера по мск, каточек пять-шесть подряд.',
+   'lfg', 'поиск,роум', '', '', 1, 0],
+  ['Retrib', 'Скин на Ю Чжуна: стоит ли своих алмазов',
+   'Анимация ульты переделана полностью, звук удара другой. По ощущениям попадать стало проще — хотя хитбокс, конечно, тот же, это чистая психология.\n\nБрал за 899. Если ты на нём не мейнишь — не бери, обычный эпик не стоит того.',
+   'skins', 'скины,ючжун', 'Ю Чжун', '', 1, 0],
 ];
 
-const DEMO_COMMENTS = [
-  [1, 'glitch', 'Ещё момент: в тёмной теме чистый белый текст жжёт глаза. #e8e8f0 читается мягче.'],
-  [1, 'kernel', 'И не забывай про OLED — настоящий чёрный красив, но смазывает при скролле.'],
-  [2, 'neon', 'Сколько соединений держала база до этого?'],
-  [2, 'kernel', 'Полтораста. Из них реально работало штук двадцать, остальные сидели в ожидании.'],
-  [4, 'vaporwave', 'Интересно, как бы она звучала, если озвучить те же данные.'],
-  [5, 'astra', 'Формулировка «если после вычитания пользователь тормозит» — заберу в заметки.'],
-  [5, 'neon', 'Половина моих правок в ревью — это возврат того, что я слишком рано убрал.'],
+const COMMENTS = [
+  [1, 'Turtle', 'Подтверждаю по красному. Ещё нюанс: если роум ставит вард на черепаху заранее, враг просто не заходит.'],
+  [1, 'MidDiff', 'А на Фанни это работает? У неё маршрут вообще другой.'],
+  [1, 'Savage', 'На Фанни всё ещё через синего, ей мана критична. Но черепаху до четвёртой тоже не трогай.'],
+  [2, 'GoldLane', 'Проблема в том, что саппорта у нас берут последним пиком и уже вслепую.'],
+  [2, 'Savage', 'Вот поэтому роум должен пикаться вторым. Всегда.'],
+  [3, 'Retrib', 'Без записи не считается, таков закон.'],
+  [4, 'MidDiff', 'Сколько у тебя винрейт на нём с такой сборкой?'],
+  [4, 'GoldLane', '61 за сезон. До этого было 53 с критом.'],
 ];
 
 export function seedIfEmpty() {
-  const db = data();
-  if (db.users.length) return false;
+  if (one('SELECT 1 AS x FROM users LIMIT 1')) return false;
 
-  const hash = hashPassword('demo1234');
-  const byName = new Map();
-  for (const [username, bio, accent] of DEMO_USERS) {
-    const user = {
-      id: nextId(), username, password: hash, bio, accent,
-      createdAt: new Date(Date.now() - 86400e3 * 30).toISOString(),
-    };
-    db.users.push(user);
-    byName.set(username, user);
-  }
-
+  const password = hashPassword(PASSWORD);
   const ids = new Map();
-  DEMO_POSTS.forEach(([author, title, body, channel, tags, likes], i) => {
-    const post = {
-      id: nextId(),
-      authorId: byName.get(author).id,
-      title, body, channel, tags,
-      likes: [...byName.values()].slice(0, likes % 5).map((u) => u.id),
-      createdAt: new Date(Date.now() - (DEMO_POSTS.length - i) * 5.5 * 36e5).toISOString(),
-    };
-    db.posts.push(post);
-    ids.set(i + 1, post.id);
+
+  PLAYERS.forEach(([username, role, hero, lane, rankId, bio, status, accent, gameId, winRate], i) => {
+    const result = run(`
+      INSERT INTO users(username, password, role, bio, status, accent, hero, lane, rank_id, game_id, win_rate, created_at)
+      VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      username, password, role, bio, status, accent, hero, lane, rankId, gameId, winRate,
+      new Date(Date.now() - (30 - i) * 86400e3).toISOString());
+    ids.set(username, Number(result.lastInsertRowid));
   });
 
-  DEMO_COMMENTS.forEach(([postIdx, author, body], i) => {
-    db.comments.push({
-      id: nextId(),
-      postId: ids.get(postIdx),
-      authorId: byName.get(author).id,
-      body,
-      createdAt: new Date(Date.now() - (DEMO_COMMENTS.length - i) * 1.7 * 36e5).toISOString(),
+  const postIds = [];
+  POSTS.forEach(([author, title, body, channel, tags, hero, feat, likes, pinned], i) => {
+    const result = run(`
+      INSERT INTO posts(author_id, title, body, channel, tags, hero, feat, lfg_lane, lfg_rank, pinned, created_at)
+      VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ids.get(author), title, body, channel, tags, hero, feat,
+      channel === 'lfg' ? 'roam' : '', channel === 'lfg' ? 'epic' : '', pinned,
+      new Date(Date.now() - (POSTS.length - i) * 6.5 * 36e5).toISOString());
+    postIds.push(Number(result.lastInsertRowid));
+
+    [...ids.values()].slice(0, likes).forEach((userId) => {
+      run('INSERT OR IGNORE INTO likes(post_id, user_id) VALUES(?, ?)', postIds[i], userId);
     });
   });
 
-  persistNow();
-  console.log('[seed] демо-контент залит (пароль у всех демо-аккаунтов: demo1234)');
+  COMMENTS.forEach(([postIdx, author, body], i) => {
+    run('INSERT INTO comments(post_id, author_id, body, created_at) VALUES(?, ?, ?, ?)',
+      postIds[postIdx - 1], ids.get(author), body,
+      new Date(Date.now() - (COMMENTS.length - i) * 1.6 * 36e5).toISOString());
+  });
+
+  // подписки и пара сообщений, чтобы разделы не встречали пустотой
+  const follow = (a, b) => run('INSERT OR IGNORE INTO follows(follower_id, followee_id, created_at) VALUES(?, ?, ?)',
+    ids.get(a), ids.get(b), now());
+  follow('Turtle', 'Savage'); follow('MidDiff', 'Savage');
+  follow('GoldLane', 'Savage'); follow('Retrib', 'Turtle'); follow('Savage', 'Turtle');
+
+  run('INSERT INTO messages(sender_id, recipient_id, body, created_at) VALUES(?, ?, ?, ?)',
+    ids.get('Turtle'), ids.get('Savage'), 'Погнали пару каточек? Мне не хватает джанглера под ротации.',
+    new Date(Date.now() - 3.2 * 36e5).toISOString());
+  run('INSERT INTO messages(sender_id, recipient_id, body, created_at) VALUES(?, ?, ?, ?)',
+    ids.get('Savage'), ids.get('Turtle'), 'Давай после девяти. Только без Франко, я тебя умоляю.',
+    new Date(Date.now() - 3.0 * 36e5).toISOString());
+
+  console.log(`[seed] залит демо-контент · пароль у всех аккаунтов: ${PASSWORD}`);
   return true;
 }
 

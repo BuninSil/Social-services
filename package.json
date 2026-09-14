@@ -2,13 +2,13 @@
   "name": "neonhub",
   "version": "1.0.0",
   "private": true,
-  "description": "NEONHUB — минималистичный форум-соцсеть в неоновом стиле",
+  "description": "NEONHUB — соцсеть сообщества Mobile Legends: Bang Bang",
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js",
-    "seed": "node seed.js"
+    "start": "node --experimental-sqlite server.js",
+    "dev": "node --experimental-sqlite --watch server.js",
+    "seed": "node --experimental-sqlite seed.js"
   },
   "engines": { "node": ">=18" }
 }
