@@ -1,0 +1,21 @@
+<%- include('partials/head', { title: 'Новый альбом', nav: 'photos' }) %>
+
+<h1 class="page_title">Создание альбома</h1>
+<% if (error) { %><div class="error"><%= error %></div><% } %>
+
+<div class="block">
+  <div class="block_body">
+    <form method="post" action="/albums/new">
+      <table class="form_table">
+        <tr><td class="label">Название</td><td><input class="text wide" type="text" name="title" maxlength="80"></td></tr>
+        <tr><td class="label">Описание</td><td><textarea class="text wide" name="description" style="height:50px" maxlength="500"></textarea></td></tr>
+        <tr><td class="label"></td><td>
+          <button class="button button_blue" type="submit">Создать</button>
+          <a class="button" href="/photos">Отмена</a>
+        </td></tr>
+      </table>
+    </form>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

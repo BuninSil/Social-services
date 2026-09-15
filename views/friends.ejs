@@ -1,0 +1,55 @@
+<%- include('partials/head', { title: 'Друзья', nav: owner.id === me.id ? 'friends' : '' }) %>
+
+<h1 class="page_title">
+  <% if (owner.id === me.id) { %>Мои друзья<% } else { %>Друзья &mdash; <a href="/id<%= owner.id %>"><%= u.fullName(owner) %></a><% } %>
+  <span class="right"><%= u.pluralCount(friends.length, 'друг', 'друга', 'друзей') %></span>
+</h1>
+
+<% if (owner.id === me.id) { %>
+  <div class="tabs">
+    <a class="<%= tab === 'all' ? 'sel' : '' %>" href="/friends">Все друзья</a>
+    <a class="<%= tab === 'requests' ? 'sel' : '' %>" href="/friends/requests">Заявки в друзья<%= incoming.length ? ' (' + incoming.length + ')' : '' %></a>
+    <a class="<%= tab === 'out' ? 'sel' : '' %>" href="/friends/out">Исходящие<%= outgoing.length ? ' (' + outgoing.length + ')' : '' %></a>
+  </div>
+<% } %>
+
+<div class="block">
+  <div class="block_body tight">
+    <% var list = tab === 'requests' ? incoming : (tab === 'out' ? outgoing : friends); %>
+    <% if (!list.length) { %>
+      <div class="empty" style="padding:10px">
+        <% if (tab === 'requests') { %>Новых заявок нет.
+        <% } else if (tab === 'out') { %>Исходящих заявок нет.
+        <% } else { %>Список друзей пуст. <a href="/search">Найдите знакомых</a>.<% } %>
+      </div>
+    <% } %>
+    <% list.forEach(function (f) { %>
+      <div class="people_row">
+        <div class="acts">
+          <% if (tab === 'requests') { %>
+            <a href="/friends/add/<%= f.id %>">Принять</a>
+            <a href="/friends/remove/<%= f.id %>">Отклонить</a>
+          <% } else if (tab === 'out') { %>
+            <a href="/friends/remove/<%= f.id %>">Отменить</a>
+          <% } else { %>
+            <a href="/im/<%= f.id %>">Написать</a>
+            <% if (owner.id === me.id) { %>
+              <a href="/friends/remove/<%= f.id %>" data-confirm="Удалить из друзей?">Удалить</a>
+            <% } %>
+          <% } %>
+        </div>
+        <div class="ava"><a href="/id<%= f.id %>"><img src="<%= avatar(f, 'thumb') %>" width="60" height="60" alt=""></a></div>
+        <div class="body">
+          <div class="name"><a href="/id<%= f.id %>"><%= u.fullName(f) %></a></div>
+          <div class="info">
+            <%= u.lastSeen(f) %><% if (f.city) { %>, <%= f.city %><% } %>
+          </div>
+          <% if (f.status) { %><div class="gray"><%= f.status %></div><% } %>
+        </div>
+        <div class="clear"></div>
+      </div>
+    <% }); %>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

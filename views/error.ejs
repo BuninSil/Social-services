@@ -1,0 +1,12 @@
+<%- include('partials/head', { title: 'Ошибка', nav: '' }) %>
+
+<h1 class="page_title"><%= code === 404 ? 'Страница не найдена' : 'Ошибка' %></h1>
+
+<div class="block">
+  <div class="block_body" style="padding:20px">
+    <p><%= message %></p>
+    <p style="padding-top:10px"><a href="/">На главную</a></p>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

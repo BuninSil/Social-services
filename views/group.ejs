@@ -1,0 +1,68 @@
+<%- include('partials/head', { title: group.name, nav: 'groups' }) %>
+
+<div id="profile_left">
+  <img class="pavatar" src="<%= gavatar(group) %>" width="200" alt="">
+  <div class="profile_actions">
+    <% if (isMember) { %>
+      <% if (!isAdmin) { %><a href="/club<%= group.id %>/leave">Выйти из группы</a><% } %>
+      <% if (isAdmin) { %>
+        <a href="/club<%= group.id %>/edit">Редактировать группу</a>
+        <a href="/club<%= group.id %>/delete" data-confirm="Удалить группу?">Удалить группу</a>
+      <% } %>
+    <% } else { %>
+      <a href="/club<%= group.id %>/join">Вступить в группу</a>
+    <% } %>
+  </div>
+
+  <div class="block" style="margin-top:10px">
+    <div class="block_head">Участники <span class="right"><%= members.length %></span></div>
+    <div class="block_body">
+      <% members.slice(0, 9).forEach(function (m) { %>
+        <div class="friend_mini">
+          <a href="/id<%= m.id %>"><img src="<%= avatar(m, 'thumb') %>" width="60" height="60" alt=""></a>
+          <a class="nm small" href="/id<%= m.id %>"><%= m.first_name %></a>
+        </div>
+      <% }); %>
+      <div class="clear"></div>
+    </div>
+  </div>
+</div>
+
+<div id="profile_right">
+  <div class="pname"><%= group.name %></div>
+  <div class="pstatus"><%= group.kind === 'public' ? 'Публичная страница' : 'Группа' %></div>
+
+  <div class="block">
+    <div class="block_head">Информация</div>
+    <div class="block_body">
+      <table class="pinfo">
+        <tr><td class="label">Описание:</td><td><%- group.description ? u.text2html(group.description) : '<span class="gray">не указано</span>' %></td></tr>
+        <tr><td class="label">Создана:</td><td><%= u.vkDate(group.created_at) %></td></tr>
+        <tr><td class="label">Создатель:</td><td><a href="/id<%= creator.id %>"><%= u.fullName(creator) %></a></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <% if (isMember) { %>
+    <%- include('partials/wallform', { action: '/club' + group.id + '/wall' }) %>
+  <% } %>
+
+  <div class="block">
+    <div class="block_head">Стена группы <span class="right"><%= wallCount %></span></div>
+    <div class="block_body tight">
+      <% if (!posts.length) { %><div class="empty" style="padding:10px">Записей пока нет.</div><% } %>
+      <% posts.forEach(function (post) { %>
+        <%- include('partials/post', {
+          post: post,
+          canDelete: isAdmin || post.author_id === me.id,
+          showOwner: false,
+          back: '/club' + group.id
+        }) %>
+      <% }); %>
+    </div>
+    <%- include('partials/pagination', { page: page, pages: pages, base: '/club' + group.id }) %>
+  </div>
+</div>
+<div class="clear"></div>
+
+<%- include('partials/foot') %>

@@ -1,0 +1,42 @@
+<%- include('partials/head', { title: 'Поиск людей', nav: 'search', q: q }) %>
+
+<h1 class="page_title">Поиск людей</h1>
+
+<div class="block">
+  <div class="block_body">
+    <form method="get" action="/search">
+      <input class="text" type="text" name="q" value="<%= q %>" size="40" placeholder="имя, фамилия или логин">
+      <button class="button" type="submit">Найти</button>
+      <span class="gray" style="margin-left:10px">Всего на сайте: <%= total %></span>
+    </form>
+  </div>
+</div>
+
+<div class="block">
+  <div class="block_head"><%= q ? 'Результаты поиска' : 'Все пользователи' %>
+    <span class="right"><%= users.length %></span></div>
+  <div class="block_body tight">
+    <% if (!users.length) { %><div class="empty" style="padding:10px">Никого не нашлось.</div><% } %>
+    <% users.forEach(function (p) { %>
+      <div class="people_row">
+        <div class="acts">
+          <a href="/im/<%= p.id %>">Написать</a>
+          <% var st = statuses[p.id]; %>
+          <% if (st === 'none') { %><a href="/friends/add/<%= p.id %>">В друзья</a>
+          <% } else if (st === 'out') { %><span class="gray small">заявка отправлена</span>
+          <% } else if (st === 'in') { %><a href="/friends/add/<%= p.id %>">Принять заявку</a>
+          <% } else if (st === 'friends') { %><span class="gray small">у Вас в друзьях</span><% } %>
+        </div>
+        <div class="ava"><a href="/id<%= p.id %>"><img src="<%= avatar(p, 'thumb') %>" width="60" height="60" alt=""></a></div>
+        <div class="body">
+          <div class="name"><a href="/id<%= p.id %>"><%= u.fullName(p) %></a></div>
+          <div class="info"><%= u.lastSeen(p) %><% if (p.city) { %>, <%= p.city %><% } %></div>
+          <% if (p.status) { %><div class="gray"><%= p.status %></div><% } %>
+        </div>
+        <div class="clear"></div>
+      </div>
+    <% }); %>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

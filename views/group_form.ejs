@@ -1,0 +1,29 @@
+<%- include('partials/head', { title: group ? 'Редактирование группы' : 'Новая группа', nav: 'groups' }) %>
+
+<h1 class="page_title"><%= group ? 'Редактирование группы' : 'Создание группы' %></h1>
+<% if (error) { %><div class="error"><%= error %></div><% } %>
+
+<div class="block">
+  <div class="block_body">
+    <form method="post" action="<%= group ? '/club' + group.id + '/edit' : '/groups/new' %>" enctype="multipart/form-data">
+      <table class="form_table">
+        <tr><td class="label">Название</td><td>
+          <input class="text wide" type="text" name="name" maxlength="80" value="<%= group ? group.name : '' %>"></td></tr>
+        <tr><td class="label">Тип</td><td>
+          <select class="text" name="kind">
+            <option value="group"<%= group && group.kind === 'group' ? ' selected' : '' %>>Группа</option>
+            <option value="public"<%= group && group.kind === 'public' ? ' selected' : '' %>>Публичная страница</option>
+          </select></td></tr>
+        <tr><td class="label">Описание</td><td>
+          <textarea class="text wide" name="description" style="height:70px" maxlength="2000"><%= group ? group.description : '' %></textarea></td></tr>
+        <tr><td class="label">Аватар</td><td><input type="file" name="avatar" accept="image/*"></td></tr>
+        <tr><td class="label"></td><td>
+          <button class="button button_blue" type="submit"><%= group ? 'Сохранить' : 'Создать' %></button>
+          <a class="button" href="<%= group ? '/club' + group.id : '/groups' %>">Отмена</a>
+        </td></tr>
+      </table>
+    </form>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

@@ -1,0 +1,33 @@
+<%- include('partials/head', { title: 'Загрузка фотографий', nav: 'photos' }) %>
+
+<h1 class="page_title">Загрузка фотографий</h1>
+<% if (error) { %><div class="error"><%= error %></div><% } %>
+
+<div class="block">
+  <div class="block_body">
+    <form method="post" action="/photos/upload" enctype="multipart/form-data">
+      <table class="form_table">
+        <tr><td class="label">Альбом</td><td>
+          <select class="text" name="album_id">
+            <% albums.forEach(function (a) { %>
+              <option value="<%= a.id %>"<%= a.id === selected ? ' selected' : '' %>><%= a.title %></option>
+            <% }); %>
+          </select>
+        </td></tr>
+        <tr><td class="label">Файлы</td><td>
+          <input type="file" name="photos" accept="image/*" multiple>
+          <div class="gray small">Можно выбрать несколько. До 12 МБ каждая, JPEG/PNG/GIF/WebP.</div>
+        </td></tr>
+        <tr><td class="label">Описание</td><td>
+          <input class="text wide" type="text" name="description" maxlength="300">
+        </td></tr>
+        <tr><td class="label"></td><td>
+          <button class="button button_blue" type="submit">Загрузить</button>
+          <a class="button" href="/photos">Отмена</a>
+        </td></tr>
+      </table>
+    </form>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

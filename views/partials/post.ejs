@@ -1,0 +1,71 @@
+<div class="post" id="post<%= post.id %>">
+  <div class="ava">
+    <a href="/id<%= post.author.id %>"><img src="<%= avatar(post.author, 'thumb') %>" width="50" alt=""></a>
+  </div>
+  <div class="body">
+    <div class="phead">
+      <a class="author" href="/id<%= post.author.id %>"><%= u.fullName(post.author) %></a>
+      <% if (post.owner_type === 'user' && post.owner && post.owner.id !== post.author.id) { %>
+        <span class="to">&rarr;</span>
+        <a href="/id<%= post.owner.id %>"><%= u.fullName(post.owner) %></a>
+      <% } %>
+      <% if (post.owner_type === 'group' && post.owner && showOwner) { %>
+        <span class="to">&rarr;</span>
+        <a href="/club<%= post.owner.id %>"><%= post.owner.name %></a>
+      <% } %>
+      <span class="date"><%= u.vkDate(post.created_at) %></span>
+    </div>
+    <div class="ptext"><%- u.text2html(post.text) %></div>
+    <% if (post.photo) { %>
+      <div class="attach">
+        <a href="/photo<%= post.photo.owner_id %>_<%= post.photo.id %>">
+          <img src="/uploads/<%= post.photo.file %>" style="max-width:400px" alt=""></a>
+      </div>
+    <% } %>
+    <% if (post.audio) { %>
+      <div class="attach audio_row" style="border:0;padding:4px 0">
+        <div class="ttl"><b><%= post.audio.artist %></b> &ndash; <%= post.audio.title %>
+          <audio controls preload="none" src="/uploads/<%= post.audio.file %>"></audio>
+        </div>
+      </div>
+    <% } %>
+    <div class="pactions">
+      <a href="#" class="like_link <%= post.liked ? 'liked' : '' %>" data-type="post" data-id="<%= post.id %>"><%=
+        (post.liked ? 'Мне не нравится' : 'Мне нравится') + (post.likes ? ' (' + post.likes + ')' : '') %></a>
+      <a href="#" class="reply_link" data-id="<%= post.id %>">Комментировать<%= post.comments.length ? ' (' + post.comments.length + ')' : '' %></a>
+      <% if (canDelete) { %>
+        <a href="/post/<%= post.id %>/delete" data-confirm="Удалить запись?">Удалить</a>
+      <% } %>
+    </div>
+  </div>
+  <div class="clear"></div>
+
+  <% if (post.comments.length) { %>
+    <div class="replies">
+      <% post.comments.forEach(function (c) { %>
+        <div class="reply">
+          <div class="ava"><a href="/id<%= c.author_id %>"><img
+            src="<%= avatar({ avatar: c.avatar }, 'thumb') %>" width="32" height="32" alt=""></a></div>
+          <div class="body">
+            <a class="author" href="/id<%= c.author_id %>"><%= c.first_name %> <%= c.last_name %></a>
+            <span class="date"><%= u.vkDate(c.created_at) %></span>
+            <% if (me && (c.author_id === me.id || canDelete)) { %>
+              <a class="small gray" href="/comment/<%= c.id %>/delete" data-confirm="Удалить комментарий?">удалить</a>
+            <% } %>
+            <div><%- u.text2html(c.text) %></div>
+          </div>
+          <div class="clear"></div>
+        </div>
+      <% }); %>
+    </div>
+  <% } %>
+
+  <% if (me) { %>
+    <form class="reply_form" id="reply_form_<%= post.id %>" method="post"
+          action="/comment?type=post&amp;id=<%= post.id %>" style="display:none">
+      <input type="hidden" name="back" value="<%= back %>">
+      <textarea class="text" name="text" maxlength="2000" placeholder="Ваш комментарий..."></textarea>
+      <div><button class="button" type="submit">Отправить</button></div>
+    </form>
+  <% } %>
+</div>

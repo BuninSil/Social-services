@@ -1,0 +1,8 @@
+<% if (pages > 1) { %>
+  <div class="pagination">
+    <% for (var i = 1; i <= pages; i++) { %>
+      <% if (i === page) { %><span class="cur"><%= i %></span>
+      <% } else { %><a href="<%= base %>?page=<%= i %>"><%= i %></a><% } %>
+    <% } %>
+  </div>
+<% } %>

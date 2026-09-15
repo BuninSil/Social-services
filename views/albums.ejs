@@ -1,0 +1,27 @@
+<%- include('partials/head', { title: 'Фотографии', nav: owner.id === me.id ? 'photos' : '' }) %>
+
+<h1 class="page_title">
+  <% if (owner.id === me.id) { %>Мои фотографии<% } else { %>Фотографии &mdash; <a href="/id<%= owner.id %>"><%= u.fullName(owner) %></a><% } %>
+  <% if (owner.id === me.id) { %>
+    <span class="right"><a href="/photos/upload">Загрузить фотографии</a> &middot;
+      <a href="/albums/new">Создать альбом</a></span>
+  <% } %>
+</h1>
+
+<div class="block">
+  <div class="block_head">Альбомы <span class="right"><%= albums.length %></span></div>
+  <div class="block_body">
+    <% if (!albums.length) { %><div class="empty">Альбомов пока нет.</div><% } %>
+    <% albums.forEach(function (a) { %>
+      <div class="album_item">
+        <a href="/album<%= owner.id %>_<%= a.id %>">
+          <img src="<%= a.cover ? '/uploads/' + a.cover : '/img/camera_200.svg' %>" width="140" height="105" alt=""></a>
+        <div class="t"><a href="/album<%= owner.id %>_<%= a.id %>"><%= a.title %></a></div>
+        <div class="c"><%= u.pluralCount(a.count, 'фотография', 'фотографии', 'фотографий') %></div>
+      </div>
+    <% }); %>
+    <div class="clear"></div>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

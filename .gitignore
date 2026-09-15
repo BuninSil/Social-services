@@ -1,0 +1,14 @@
+node_modules/
+
+# Загрузки и база создаются на ходу (нужные подпапки заводит src/lib/upload.js).
+uploads/*
+!uploads/.gitkeep
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+.env
+npm-debug.log*
+.DS_Store

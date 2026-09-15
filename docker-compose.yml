@@ -1,0 +1,18 @@
+services:
+  vonline:
+    build: .
+    container_name: vonline
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Задайте свой секрет, чтобы сессии не зависели от содержимого тома.
+      # VO_SECRET: поменяйте-меня-на-длинную-случайную-строку
+      TZ: Europe/Moscow
+    volumes:
+      - vo-data:/app/data
+      - vo-uploads:/app/uploads
+
+volumes:
+  vo-data:
+  vo-uploads:

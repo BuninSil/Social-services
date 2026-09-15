@@ -1,0 +1,362 @@
+/* ВОнлайне — оформление в духе ВКонтакте образца 2010 года.
+   Тахома 11px, фиксированная ширина, никакой адаптивности, всё подчёркнуто. */
+
+* { margin: 0; padding: 0; }
+
+body {
+  background: #ededed;
+  color: #333;
+  font: 11px Tahoma, Verdana, Geneva, Arial, sans-serif;
+  line-height: 15px;
+}
+
+a { color: #2b587a; text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:visited { color: #2b587a; }
+img { border: 0; }
+table { border-collapse: collapse; }
+input, textarea, select, button { font: 11px Tahoma, Verdana, Geneva, Arial, sans-serif; }
+h1 { font-size: 16px; font-weight: bold; color: #2b587a; line-height: 20px; }
+h2 { font-size: 13px; font-weight: bold; color: #2b587a; line-height: 17px; }
+
+/* ------------------------------------------------------------- шапка */
+
+#header {
+  background: #4c75a3;
+  border-bottom: 1px solid #2b4d75;
+  height: 36px;
+}
+#header_in { width: 940px; margin: 0 auto; position: relative; }
+
+#logo {
+  display: block;
+  float: left;
+  height: 36px;
+  line-height: 36px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+#logo:hover { text-decoration: none; }
+#logo .logo_box {
+  display: inline-block;
+  background: #fff;
+  color: #4c75a3;
+  padding: 1px 4px;
+  margin-right: 5px;
+  font-size: 13px;
+  line-height: 15px;
+  vertical-align: 1px;
+  border-radius: 2px;
+}
+
+#head_search { float: left; margin: 7px 0 0 20px; }
+#head_search input.head_q {
+  width: 180px;
+  border: 1px solid #2b4d75;
+  padding: 2px 4px;
+  background: #fff;
+  color: #333;
+}
+
+#head_nav { float: right; height: 36px; line-height: 36px; color: #c5d5e6; }
+#head_nav a { color: #fff; }
+#head_nav .sep { color: #7a9cc0; padding: 0 5px; }
+
+/* ------------------------------------------------------------- раскладка */
+
+#page { width: 940px; margin: 0 auto; padding: 15px 0 30px; }
+#side { float: left; width: 165px; }
+#content { margin-left: 180px; }
+.clear { clear: both; height: 0; overflow: hidden; }
+
+/* ------------------------------------------------------------- левое меню */
+
+#side .me {
+  padding-bottom: 10px;
+}
+#side .me img { display: block; border: 1px solid #ccc; padding: 1px; background: #fff; }
+#side .me .name { padding-top: 5px; font-weight: bold; }
+
+ul#left_menu { list-style: none; margin-bottom: 12px; }
+ul#left_menu li a {
+  display: block;
+  padding: 3px 6px;
+  color: #2b587a;
+  text-decoration: none;
+  border-bottom: 1px solid #e0e0e0;
+}
+ul#left_menu li a:hover { background: #dae1e8; text-decoration: none; }
+ul#left_menu li a.sel { background: #45688e; color: #fff; font-weight: bold; }
+ul#left_menu li a.sel:hover { background: #45688e; }
+ul#left_menu li a .cnt {
+  float: right;
+  background: #d14836;
+  color: #fff;
+  padding: 0 4px;
+  font-size: 10px;
+  line-height: 13px;
+  margin-top: 1px;
+  border-radius: 2px;
+}
+ul#left_menu li a.sel .cnt { background: #fff; color: #45688e; }
+
+#side .side_note { color: #777; padding: 0 6px; line-height: 14px; }
+#side .side_note a { color: #2b587a; }
+
+/* ------------------------------------------------------------- блоки */
+
+.block { background: #fff; border: 1px solid #dedede; margin-bottom: 12px; }
+.block_head {
+  background: #f7f7f7;
+  border-bottom: 1px solid #dedede;
+  padding: 4px 8px;
+  font-weight: bold;
+  color: #2b587a;
+}
+.block_head .right { float: right; font-weight: normal; }
+.block_body { padding: 8px; }
+.block_body.tight { padding: 0; }
+.block_foot {
+  background: #f7f7f7;
+  border-top: 1px solid #dedede;
+  padding: 4px 8px;
+}
+
+.page_title { margin-bottom: 8px; }
+.page_title .right { float: right; font-size: 11px; font-weight: normal; line-height: 20px; }
+
+/* ------------------------------------------------------------- кнопки и поля */
+
+.button {
+  display: inline-block;
+  background: #ecedf1;
+  border: 1px solid #b6b9bc;
+  color: #2b587a;
+  padding: 2px 9px;
+  cursor: pointer;
+  line-height: 15px;
+  text-decoration: none;
+}
+.button:hover { background: #e2e4ea; text-decoration: none; }
+.button:active { background: #d9dbe1; }
+.button_blue {
+  background: #6d8ab1;
+  border: 1px solid #4c75a3;
+  color: #fff;
+  font-weight: bold;
+}
+.button_blue:hover { background: #5f7ea8; }
+.button_small { padding: 1px 6px; }
+
+input.text, textarea.text, select.text {
+  border: 1px solid #c0cad5;
+  background: #fff;
+  padding: 3px 4px;
+  color: #333;
+}
+input.text:focus, textarea.text:focus { border-color: #92a8c0; outline: none; }
+textarea.text { resize: vertical; line-height: 15px; }
+.wide { width: 97%; }
+
+.form_row { margin-bottom: 7px; }
+.form_row .lbl { color: #777; padding-bottom: 2px; }
+.form_table td { padding: 3px 8px 3px 0; vertical-align: top; }
+.form_table td.label { color: #777; width: 150px; text-align: right; padding-top: 5px; }
+
+.error {
+  background: #ffe9e9;
+  border: 1px solid #e9b8b8;
+  color: #a33;
+  padding: 5px 8px;
+  margin-bottom: 10px;
+}
+.notice {
+  background: #f3f8ed;
+  border: 1px solid #c6d9b2;
+  color: #4b6b35;
+  padding: 5px 8px;
+  margin-bottom: 10px;
+}
+.empty { color: #777; padding: 10px 0; }
+.gray { color: #777; }
+.small { font-size: 10px; }
+
+/* ------------------------------------------------------------- профиль */
+
+#profile_left { float: left; width: 200px; }
+#profile_right { margin-left: 215px; }
+
+.pavatar { border: 1px solid #ccc; padding: 2px; background: #fff; display: block; }
+.profile_actions { margin-top: 8px; }
+.profile_actions a { display: block; margin-bottom: 4px; }
+
+.pname { font-size: 16px; font-weight: bold; color: #2b587a; }
+.pstatus { color: #555; padding: 3px 0 8px; font-style: italic; }
+.pstatus a.edit_status { font-style: normal; font-size: 10px; }
+
+table.pinfo { width: 100%; }
+table.pinfo td { padding: 2px 0; vertical-align: top; line-height: 16px; }
+table.pinfo td.label { color: #777; width: 135px; padding-right: 10px; }
+table.pinfo tr.section td {
+  padding-top: 10px;
+  font-weight: bold;
+  color: #2b587a;
+  border-bottom: 1px solid #eee;
+}
+
+.counters { border-top: 1px solid #eee; margin-top: 8px; padding-top: 6px; }
+.counters a { margin-right: 12px; }
+.counters b { color: #333; }
+
+/* ------------------------------------------------------------- стена */
+
+.wall_form { margin-bottom: 12px; }
+.wall_form textarea { width: 99%; height: 45px; }
+.wall_form .wf_foot { padding-top: 5px; }
+.wall_form .wf_foot .right { float: right; color: #777; }
+
+.post { border-bottom: 1px solid #eee; padding: 8px; }
+.post:last-child { border-bottom: 0; }
+.post .ava { float: left; width: 50px; }
+.post .ava img { border: 1px solid #ccc; padding: 1px; background: #fff; }
+.post .body { margin-left: 60px; }
+.post .phead { padding-bottom: 2px; }
+.post .phead .author { font-weight: bold; }
+.post .phead .date { color: #999; font-size: 10px; margin-left: 5px; }
+.post .phead .to { color: #999; }
+.post .ptext { word-wrap: break-word; }
+.post .pactions { padding-top: 4px; font-size: 10px; color: #999; }
+.post .pactions a { margin-right: 10px; }
+.post .attach { padding-top: 5px; }
+.post .attach img { border: 1px solid #ccc; padding: 1px; background: #fff; }
+
+a.like_link.liked { color: #a33; font-weight: bold; }
+
+.replies { margin: 6px 0 0 60px; border-left: 2px solid #eee; padding-left: 8px; }
+.reply { padding: 4px 0; }
+.reply .ava { float: left; }
+.reply .ava img { border: 1px solid #ccc; padding: 1px; background: #fff; }
+.reply .body { margin-left: 40px; }
+.reply .author { font-weight: bold; }
+.reply .date { color: #999; font-size: 10px; margin-left: 5px; }
+.reply_form { margin: 6px 0 0 60px; }
+.reply_form textarea { width: 80%; height: 32px; }
+
+/* ------------------------------------------------------------- люди */
+
+.people_row { border-bottom: 1px solid #eee; padding: 8px; }
+.people_row:last-child { border-bottom: 0; }
+.people_row .ava { float: left; width: 60px; }
+.people_row .ava img { border: 1px solid #ccc; padding: 1px; background: #fff; }
+.people_row .body { margin-left: 72px; }
+.people_row .name { font-weight: bold; font-size: 12px; }
+.people_row .info { color: #777; }
+.people_row .acts { float: right; text-align: right; }
+.people_row .acts a { display: block; margin-bottom: 3px; }
+
+.friend_mini { float: left; width: 68px; text-align: center; margin: 0 5px 8px 0; overflow: hidden; }
+.friend_mini img { border: 1px solid #ccc; padding: 1px; background: #fff; }
+.friend_mini .nm { display: block; line-height: 13px; padding-top: 2px; }
+
+.online_dot { color: #5b8c3e; font-size: 10px; }
+
+/* ------------------------------------------------------------- сообщения */
+
+.dlg_row { border-bottom: 1px solid #eee; padding: 7px 8px; }
+.dlg_row:last-child { border-bottom: 0; }
+.dlg_row.unread { background: #f3f7fc; }
+.dlg_row .ava { float: left; }
+.dlg_row .ava img { border: 1px solid #ccc; padding: 1px; background: #fff; }
+.dlg_row .body { margin-left: 62px; }
+.dlg_row .name { font-weight: bold; }
+.dlg_row .date { float: right; color: #999; font-size: 10px; }
+.dlg_row .preview { color: #555; }
+
+#chat { max-height: 420px; overflow-y: auto; padding: 8px; }
+.msg { padding: 5px 0; border-bottom: 1px solid #f2f2f2; }
+.msg .ava { float: left; }
+.msg .ava img { border: 1px solid #ccc; padding: 1px; background: #fff; }
+.msg .body { margin-left: 46px; }
+.msg .author { font-weight: bold; }
+.msg .date { color: #999; font-size: 10px; margin-left: 5px; }
+.msg.out .body { color: #333; }
+.msg.fresh { background: #fbfbe8; }
+
+#send_form textarea { width: 99%; height: 50px; }
+#send_form .sf_foot { padding-top: 5px; }
+
+/* ------------------------------------------------------------- фото */
+
+.album_item { float: left; width: 145px; margin: 0 10px 12px 0; }
+.album_item img { border: 1px solid #ccc; padding: 2px; background: #fff; display: block; }
+.album_item .t { padding-top: 3px; font-weight: bold; }
+.album_item .c { color: #777; }
+
+.photo_item { float: left; margin: 0 8px 8px 0; }
+.photo_item img { border: 1px solid #ccc; padding: 2px; background: #fff; display: block; }
+
+#photo_view { text-align: center; background: #f7f7f7; padding: 10px; border-bottom: 1px solid #dedede; }
+#photo_view img { border: 1px solid #ccc; padding: 2px; background: #fff; max-width: 730px; }
+.photo_nav { padding: 6px 8px; }
+.photo_nav .right { float: right; }
+
+/* ------------------------------------------------------------- аудио */
+
+.audio_row { border-bottom: 1px solid #eee; padding: 6px 8px; }
+.audio_row:last-child { border-bottom: 0; }
+.audio_row .play { float: left; width: 20px; }
+.audio_row .ttl { margin-left: 24px; }
+.audio_row .ttl b { color: #2b587a; }
+.audio_row .acts { float: right; font-size: 10px; }
+.audio_row audio { width: 100%; margin-top: 4px; }
+
+/* ------------------------------------------------------------- группы */
+
+.group_row { border-bottom: 1px solid #eee; padding: 8px; }
+.group_row:last-child { border-bottom: 0; }
+.group_row .ava { float: left; width: 60px; }
+.group_row .ava img { border: 1px solid #ccc; padding: 1px; background: #fff; }
+.group_row .body { margin-left: 72px; }
+.group_row .name { font-weight: bold; font-size: 12px; }
+
+/* ------------------------------------------------------------- прочее */
+
+.tabs { border-bottom: 1px solid #dedede; margin-bottom: 10px; }
+.tabs a {
+  display: inline-block;
+  padding: 3px 10px;
+  margin-right: 2px;
+  border: 1px solid #dedede;
+  border-bottom: 0;
+  background: #f7f7f7;
+}
+.tabs a.sel { background: #fff; font-weight: bold; position: relative; top: 1px; }
+
+.pagination { padding: 8px; text-align: center; }
+.pagination a, .pagination span {
+  display: inline-block;
+  padding: 1px 6px;
+  margin: 0 1px;
+  border: 1px solid #dedede;
+  background: #fff;
+}
+.pagination span.cur { background: #45688e; color: #fff; border-color: #45688e; font-weight: bold; }
+
+#footer {
+  width: 940px;
+  margin: 0 auto;
+  padding: 10px 0 25px;
+  color: #999;
+  border-top: 1px solid #dcdcdc;
+}
+#footer a { color: #777; }
+
+/* ------------------------------------------------------------- вход */
+
+#auth_page { width: 620px; margin: 40px auto; }
+#auth_page .tagline { color: #777; padding: 6px 0 14px; }
+#auth_box { float: left; width: 280px; }
+#auth_about { margin-left: 310px; color: #555; line-height: 16px; }
+#auth_about ul { margin: 6px 0 0 16px; }

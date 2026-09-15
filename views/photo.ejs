@@ -1,0 +1,56 @@
+<%- include('partials/head', { title: 'Фотография', nav: '' }) %>
+
+<h1 class="page_title">Фотография
+  <span class="right">
+    <a href="/id<%= owner.id %>"><%= u.fullName(owner) %></a>
+    <% if (album) { %> &middot; <a href="/album<%= owner.id %>_<%= album.id %>"><%= album.title %></a><% } %>
+  </span>
+</h1>
+
+<div class="block">
+  <div id="photo_view"><img src="/uploads/<%= photo.file %>" alt=""></div>
+  <div class="photo_nav">
+    <span class="right">
+      <% if (prev) { %><a href="/photo<%= owner.id %>_<%= prev %>">&larr; Предыдущая</a><% } %>
+      <% if (next) { %> &middot; <a href="/photo<%= owner.id %>_<%= next %>">Следующая &rarr;</a><% } %>
+    </span>
+    <a href="#" class="like_link <%= liked ? 'liked' : '' %>" data-type="photo" data-id="<%= photo.id %>"><%=
+      (liked ? 'Мне не нравится' : 'Мне нравится') + (likes ? ' (' + likes + ')' : '') %></a>
+    <% if (me.id === owner.id) { %>
+      <a href="/photo<%= owner.id %>_<%= photo.id %>/delete" data-confirm="Удалить фотографию?">Удалить</a>
+    <% } %>
+    <div class="clear"></div>
+  </div>
+  <% if (photo.description) { %>
+    <div class="block_body" style="border-top:1px solid #eee"><%- u.text2html(photo.description) %></div>
+  <% } %>
+</div>
+
+<div class="block">
+  <div class="block_head">Комментарии <span class="right"><%= comments.length %></span></div>
+  <div class="block_body">
+    <% if (!comments.length) { %><div class="empty">Комментариев пока нет.</div><% } %>
+    <% comments.forEach(function (c) { %>
+      <div class="reply">
+        <div class="ava"><a href="/id<%= c.author_id %>"><img src="<%= avatar({ avatar: c.avatar }, 'thumb') %>"
+          width="32" height="32" alt=""></a></div>
+        <div class="body">
+          <a class="author" href="/id<%= c.author_id %>"><%= c.first_name %> <%= c.last_name %></a>
+          <span class="date"><%= u.vkDate(c.created_at) %></span>
+          <% if (c.author_id === me.id || owner.id === me.id) { %>
+            <a class="small gray" href="/comment/<%= c.id %>/delete" data-confirm="Удалить комментарий?">удалить</a>
+          <% } %>
+          <div><%- u.text2html(c.text) %></div>
+        </div>
+        <div class="clear"></div>
+      </div>
+    <% }); %>
+    <form method="post" action="/comment?type=photo&amp;id=<%= photo.id %>" style="padding-top:8px">
+      <input type="hidden" name="back" value="/photo<%= owner.id %>_<%= photo.id %>">
+      <textarea class="text wide" name="text" style="height:40px" placeholder="Ваш комментарий..."></textarea>
+      <div style="padding-top:5px"><button class="button" type="submit">Отправить</button></div>
+    </form>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

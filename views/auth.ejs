@@ -1,0 +1,67 @@
+<%- include('partials/head', { title: mode === 'register' ? 'Регистрация' : 'Вход', nav: '' }) %>
+
+<div id="auth_page">
+  <h1>ВОнлайне</h1>
+  <div class="tagline">Локальная социальная сеть. Быстрый и бесплатный способ оставаться на связи со своими.</div>
+
+  <% if (error) { %><div class="error"><%= error %></div><% } %>
+  <% if (notice) { %><div class="notice"><%= notice %></div><% } %>
+
+  <div id="auth_box">
+    <div class="block">
+      <div class="block_head"><%= mode === 'register' ? 'Регистрация' : 'Вход на сайт' %></div>
+      <div class="block_body">
+        <% if (mode === 'register') { %>
+          <form method="post" action="/register">
+            <div class="form_row"><div class="lbl">Имя</div>
+              <input class="text wide" type="text" name="first_name" value="<%= form.first_name || '' %>" maxlength="30"></div>
+            <div class="form_row"><div class="lbl">Фамилия</div>
+              <input class="text wide" type="text" name="last_name" value="<%= form.last_name || '' %>" maxlength="30"></div>
+            <div class="form_row"><div class="lbl">Логин (латиницей)</div>
+              <input class="text wide" type="text" name="login" value="<%= form.login || '' %>" maxlength="20"></div>
+            <div class="form_row"><div class="lbl">Пол</div>
+              <select class="text" name="sex">
+                <option value="m">мужской</option>
+                <option value="f"<%= form.sex === 'f' ? ' selected' : '' %>>женский</option>
+              </select></div>
+            <div class="form_row"><div class="lbl">Пароль</div>
+              <input class="text wide" type="password" name="password"></div>
+            <div class="form_row"><div class="lbl">Пароль ещё раз</div>
+              <input class="text wide" type="password" name="password2"></div>
+            <button class="button button_blue" type="submit">Зарегистрироваться</button>
+            <div style="padding-top:8px"><a href="/login">Я уже зарегистрирован</a></div>
+          </form>
+        <% } else { %>
+          <form method="post" action="/login">
+            <input type="hidden" name="next" value="<%= next || '' %>">
+            <div class="form_row"><div class="lbl">Логин</div>
+              <input class="text wide" type="text" name="login" value="<%= form.login || '' %>"></div>
+            <div class="form_row"><div class="lbl">Пароль</div>
+              <input class="text wide" type="password" name="password"></div>
+            <button class="button button_blue" type="submit">Войти</button>
+            <div style="padding-top:8px"><a href="/register">Зарегистрироваться</a></div>
+          </form>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <div id="auth_about">
+    <b>Здесь можно:</b>
+    <ul>
+      <li>завести страницу с анкетой и статусом;</li>
+      <li>добавлять друзей и смотреть общих;</li>
+      <li>писать на стену и комментировать;</li>
+      <li>переписываться в личных сообщениях;</li>
+      <li>заливать фотографии в альбомы;</li>
+      <li>держать свои аудиозаписи;</li>
+      <li>создавать группы и читать новости.</li>
+    </ul>
+    <p style="padding-top:10px" class="gray">
+      Сайт работает только внутри локальной сети. Наружу ничего не уходит.
+    </p>
+  </div>
+  <div class="clear"></div>
+</div>
+
+<%- include('partials/foot') %>

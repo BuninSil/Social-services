@@ -1,0 +1,47 @@
+<%- include('partials/head', { title: 'Аудиозаписи', nav: owner.id === me.id ? 'audio' : '' }) %>
+
+<h1 class="page_title">
+  <% if (owner.id === me.id) { %>Мои аудиозаписи<% } else { %>Аудиозаписи &mdash; <a href="/id<%= owner.id %>"><%= u.fullName(owner) %></a><% } %>
+  <span class="right"><%= u.pluralCount(audios.length, 'запись', 'записи', 'записей') %></span>
+</h1>
+<% if (error) { %><div class="error"><%= error %></div><% } %>
+
+<% if (owner.id === me.id) { %>
+  <div class="block">
+    <div class="block_head">Загрузить аудиозапись</div>
+    <div class="block_body">
+      <form method="post" action="/audio/upload" enctype="multipart/form-data">
+        <table class="form_table">
+          <tr><td class="label">Исполнитель</td><td><input class="text" type="text" name="artist" size="30" maxlength="80"></td></tr>
+          <tr><td class="label">Название</td><td><input class="text" type="text" name="title" size="30" maxlength="80"></td></tr>
+          <tr><td class="label">Файл</td><td><input type="file" name="audio" accept="audio/*">
+            <span class="gray small">mp3/ogg/wav, до 30 МБ</span></td></tr>
+          <tr><td class="label"></td><td><button class="button button_blue" type="submit">Загрузить</button></td></tr>
+        </table>
+      </form>
+    </div>
+  </div>
+<% } %>
+
+<div class="block">
+  <div class="block_head">Список</div>
+  <div class="block_body tight">
+    <% if (!audios.length) { %><div class="empty" style="padding:10px">Аудиозаписей пока нет.</div><% } %>
+    <% audios.forEach(function (a) { %>
+      <div class="audio_row">
+        <div class="acts">
+          <% if (owner.id === me.id) { %>
+            <a href="/audio/<%= a.id %>/delete" data-confirm="Удалить аудиозапись?">удалить</a>
+          <% } %>
+        </div>
+        <div class="ttl">
+          <b><%= a.artist %></b> &ndash; <%= a.title %>
+          <audio controls preload="none" src="/uploads/<%= a.file %>"></audio>
+        </div>
+        <div class="clear"></div>
+      </div>
+    <% }); %>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

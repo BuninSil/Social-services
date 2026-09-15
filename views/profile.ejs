@@ -1,0 +1,134 @@
+<%- include('partials/head', { title: u.fullName(user), nav: user.id === (me && me.id) ? 'profile' : '' }) %>
+
+<div id="profile_left">
+  <img class="pavatar" src="<%= avatar(user, 'full') %>" width="200" alt="">
+  <div class="profile_actions">
+    <% if (status === 'self') { %>
+      <a href="/settings">Редактировать страницу</a>
+      <a href="/photos/upload">Загрузить фотографию</a>
+    <% } else { %>
+      <a href="/im/<%= user.id %>">Отправить сообщение</a>
+      <% if (status === 'friends') { %>
+        <a href="/friends/remove/<%= user.id %>" data-confirm="Удалить из друзей?">Удалить из друзей</a>
+      <% } else if (status === 'out') { %>
+        <span class="gray">Заявка отправлена</span>
+        <a href="/friends/remove/<%= user.id %>">Отменить заявку</a>
+      <% } else if (status === 'in') { %>
+        <a href="/friends/add/<%= user.id %>">Принять в друзья</a>
+      <% } else { %>
+        <a href="/friends/add/<%= user.id %>">Добавить в друзья</a>
+      <% } %>
+    <% } %>
+  </div>
+
+  <% if (friends.length) { %>
+    <div class="block" style="margin-top:10px">
+      <div class="block_head">Друзья
+        <span class="right"><a href="/friends/<%= user.id %>"><%= friendsCount %></a></span></div>
+      <div class="block_body">
+        <% friends.slice(0, 6).forEach(function (f) { %>
+          <div class="friend_mini">
+            <a href="/id<%= f.id %>"><img src="<%= avatar(f, 'thumb') %>" width="60" height="60" alt=""></a>
+            <a class="nm small" href="/id<%= f.id %>"><%= f.first_name %></a>
+          </div>
+        <% }); %>
+        <div class="clear"></div>
+      </div>
+    </div>
+  <% } %>
+
+  <% if (mutual && mutual.length) { %>
+    <div class="block">
+      <div class="block_head">Общие друзья <span class="right"><%= mutual.length %></span></div>
+      <div class="block_body">
+        <% mutual.slice(0, 6).forEach(function (f) { %>
+          <div class="friend_mini">
+            <a href="/id<%= f.id %>"><img src="<%= avatar(f, 'thumb') %>" width="60" height="60" alt=""></a>
+            <a class="nm small" href="/id<%= f.id %>"><%= f.first_name %></a>
+          </div>
+        <% }); %>
+        <div class="clear"></div>
+      </div>
+    </div>
+  <% } %>
+
+  <% if (photos.length) { %>
+    <div class="block">
+      <div class="block_head">Фотографии
+        <span class="right"><a href="/photos/<%= user.id %>"><%= photosCount %></a></span></div>
+      <div class="block_body">
+        <% photos.forEach(function (p) { %>
+          <div class="photo_item"><a href="/photo<%= user.id %>_<%= p.id %>"><img
+            src="/uploads/<%= p.thumb %>" width="55" height="55" alt=""></a></div>
+        <% }); %>
+        <div class="clear"></div>
+      </div>
+    </div>
+  <% } %>
+</div>
+
+<div id="profile_right">
+  <div class="pname"><%= u.fullName(user) %></div>
+  <div class="pstatus">
+    <% if (user.status) { %><%= user.status %><% } else if (status === 'self') { %>
+      <span class="gray">Здесь может быть Ваш статус.</span><% } %>
+    <% if (status === 'self') { %> <a class="edit_status" href="/settings">изменить</a><% } %>
+  </div>
+
+  <div class="block">
+    <div class="block_head">Основная информация</div>
+    <div class="block_body">
+      <table class="pinfo">
+        <tr><td class="label">Был на сайте:</td><td><%= u.lastSeen(user) || '&mdash;' %></td></tr>
+        <% if (user.bday) { %><tr><td class="label">День рождения:</td><td><%= u.formatBday(user.bday) %></td></tr><% } %>
+        <% if (user.city) { %><tr><td class="label">Город:</td><td><%= user.city %></td></tr><% } %>
+        <% if (user.hometown) { %><tr><td class="label">Родной город:</td><td><%= user.hometown %></td></tr><% } %>
+        <% if (user.relationship) { %><tr><td class="label">Семейное положение:</td><td><%= user.relationship %></td></tr><% } %>
+        <% if (user.politics) { %><tr><td class="label">Полит. взгляды:</td><td><%= user.politics %></td></tr><% } %>
+        <% if (user.worldview) { %><tr><td class="label">Мировоззрение:</td><td><%= user.worldview %></td></tr><% } %>
+
+        <% if (user.activity || user.interests || user.music || user.films || user.tv || user.books || user.games || user.quotes || user.about) { %>
+          <tr class="section"><td colspan="2">Личная информация</td></tr>
+          <% if (user.activity) { %><tr><td class="label">Деятельность:</td><td><%- u.text2html(user.activity) %></td></tr><% } %>
+          <% if (user.interests) { %><tr><td class="label">Интересы:</td><td><%- u.text2html(user.interests) %></td></tr><% } %>
+          <% if (user.music) { %><tr><td class="label">Любимая музыка:</td><td><%- u.text2html(user.music) %></td></tr><% } %>
+          <% if (user.films) { %><tr><td class="label">Любимые фильмы:</td><td><%- u.text2html(user.films) %></td></tr><% } %>
+          <% if (user.tv) { %><tr><td class="label">Любимые телешоу:</td><td><%- u.text2html(user.tv) %></td></tr><% } %>
+          <% if (user.books) { %><tr><td class="label">Любимые книги:</td><td><%- u.text2html(user.books) %></td></tr><% } %>
+          <% if (user.games) { %><tr><td class="label">Любимые игры:</td><td><%- u.text2html(user.games) %></td></tr><% } %>
+          <% if (user.quotes) { %><tr><td class="label">Любимые цитаты:</td><td><%- u.text2html(user.quotes) %></td></tr><% } %>
+          <% if (user.about) { %><tr><td class="label">О себе:</td><td><%- u.text2html(user.about) %></td></tr><% } %>
+        <% } %>
+      </table>
+      <div class="counters">
+        <a href="/friends/<%= user.id %>"><b><%= friendsCount %></b> <%= u.plural(friendsCount, 'друг', 'друга', 'друзей') %></a>
+        <a href="/photos/<%= user.id %>"><b><%= photosCount %></b> <%= u.plural(photosCount, 'фотография', 'фотографии', 'фотографий') %></a>
+        <a href="/audio/<%= user.id %>"><b><%= audioCount %></b> <%= u.plural(audioCount, 'аудиозапись', 'аудиозаписи', 'аудиозаписей') %></a>
+        <a href="/groups/<%= user.id %>"><b><%= groupsCount %></b> <%= u.plural(groupsCount, 'группа', 'группы', 'групп') %></a>
+      </div>
+    </div>
+  </div>
+
+  <% if (canPost) { %>
+    <%- include('partials/wallform', { action: '/id' + user.id + '/wall' }) %>
+  <% } %>
+
+  <div class="block">
+    <div class="block_head">Стена <span class="right"><%= wallCount %></span></div>
+    <div class="block_body tight">
+      <% if (!posts.length) { %><div class="empty" style="padding:10px">Записей пока нет.</div><% } %>
+      <% posts.forEach(function (post) { %>
+        <%- include('partials/post', {
+          post: post,
+          canDelete: !!me && (me.id === user.id || me.id === post.author_id),
+          showOwner: false,
+          back: '/id' + user.id
+        }) %>
+      <% }); %>
+    </div>
+    <%- include('partials/pagination', { page: page, pages: pages, base: '/id' + user.id }) %>
+  </div>
+</div>
+<div class="clear"></div>
+
+<%- include('partials/foot') %>

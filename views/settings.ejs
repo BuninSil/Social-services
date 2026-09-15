@@ -1,0 +1,100 @@
+<%- include('partials/head', { title: 'Мои Настройки', nav: 'settings' }) %>
+
+<h1 class="page_title">Мои Настройки
+  <span class="right"><a href="/id<%= me.id %>">Вернуться на страницу</a></span></h1>
+<% if (error) { %><div class="error"><%= error %></div><% } %>
+<% if (notice) { %><div class="notice"><%= notice %></div><% } %>
+
+<div class="block">
+  <div class="block_head">Фотография страницы</div>
+  <div class="block_body">
+    <form method="post" action="/settings/avatar" enctype="multipart/form-data">
+      <table class="form_table">
+        <tr>
+          <td style="width:120px"><img class="pavatar" src="<%= avatar(me, 'thumb') %>" width="100" alt=""></td>
+          <td>
+            <input type="file" name="avatar" accept="image/*">
+            <div style="padding-top:6px">
+              <button class="button button_blue" type="submit">Загрузить</button>
+              <% if (me.avatar) { %><a class="button" href="/settings/avatar/delete" data-confirm="Удалить фотографию?">Удалить</a><% } %>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </form>
+  </div>
+</div>
+
+<div class="block">
+  <div class="block_head">Основная информация</div>
+  <div class="block_body">
+    <form method="post" action="/settings">
+      <table class="form_table">
+        <tr><td class="label">Имя</td><td><input class="text" type="text" name="first_name" size="30" maxlength="30" value="<%= me.first_name %>"></td></tr>
+        <tr><td class="label">Фамилия</td><td><input class="text" type="text" name="last_name" size="30" maxlength="30" value="<%= me.last_name %>"></td></tr>
+        <tr><td class="label">Пол</td><td>
+          <select class="text" name="sex">
+            <option value="m"<%= me.sex === 'm' ? ' selected' : '' %>>мужской</option>
+            <option value="f"<%= me.sex === 'f' ? ' selected' : '' %>>женский</option>
+          </select></td></tr>
+        <tr><td class="label">Статус</td><td><input class="text wide" type="text" name="status" maxlength="140" value="<%= me.status %>"></td></tr>
+        <tr><td class="label">День рождения</td><td><input class="text" type="text" name="bday" size="14" maxlength="10" value="<%= me.bday %>">
+          <span class="gray small">в формате ДД.ММ.ГГГГ</span></td></tr>
+        <tr><td class="label">Город</td><td><input class="text" type="text" name="city" size="30" maxlength="60" value="<%= me.city %>"></td></tr>
+        <tr><td class="label">Родной город</td><td><input class="text" type="text" name="hometown" size="30" maxlength="60" value="<%= me.hometown %>"></td></tr>
+        <tr><td class="label">Семейное положение</td><td>
+          <select class="text" name="relationship">
+            <% ['', 'не женат', 'есть подруга', 'помолвлен', 'женат', 'всё сложно', 'в активном поиске', 'влюблён'].forEach(function (r) { %>
+              <option value="<%= r %>"<%= me.relationship === r ? ' selected' : '' %>><%= r || 'не указано' %></option>
+            <% }); %>
+          </select></td></tr>
+        <tr><td class="label">Полит. взгляды</td><td>
+          <select class="text" name="politics">
+            <% ['', 'индифферентные', 'коммунистические', 'социалистические', 'умеренные', 'либеральные',
+                'консервативные', 'монархические', 'ультраконсервативные', 'либертарианские'].forEach(function (r) { %>
+              <option value="<%= r %>"<%= me.politics === r ? ' selected' : '' %>><%= r || 'не указано' %></option>
+            <% }); %>
+          </select></td></tr>
+        <tr><td class="label">Мировоззрение</td><td><input class="text" type="text" name="worldview" size="30" maxlength="60" value="<%= me.worldview %>"></td></tr>
+
+        <tr><td class="label" style="padding-top:14px"><b>Личная информация</b></td><td></td></tr>
+        <tr><td class="label">Деятельность</td><td><textarea class="text wide" name="activity" style="height:36px" maxlength="500"><%= me.activity %></textarea></td></tr>
+        <tr><td class="label">Интересы</td><td><textarea class="text wide" name="interests" style="height:36px" maxlength="500"><%= me.interests %></textarea></td></tr>
+        <tr><td class="label">Любимая музыка</td><td><textarea class="text wide" name="music" style="height:36px" maxlength="500"><%= me.music %></textarea></td></tr>
+        <tr><td class="label">Любимые фильмы</td><td><textarea class="text wide" name="films" style="height:36px" maxlength="500"><%= me.films %></textarea></td></tr>
+        <tr><td class="label">Любимые телешоу</td><td><textarea class="text wide" name="tv" style="height:36px" maxlength="500"><%= me.tv %></textarea></td></tr>
+        <tr><td class="label">Любимые книги</td><td><textarea class="text wide" name="books" style="height:36px" maxlength="500"><%= me.books %></textarea></td></tr>
+        <tr><td class="label">Любимые игры</td><td><textarea class="text wide" name="games" style="height:36px" maxlength="500"><%= me.games %></textarea></td></tr>
+        <tr><td class="label">Любимые цитаты</td><td><textarea class="text wide" name="quotes" style="height:50px" maxlength="1000"><%= me.quotes %></textarea></td></tr>
+        <tr><td class="label">О себе</td><td><textarea class="text wide" name="about" style="height:70px" maxlength="2000"><%= me.about %></textarea></td></tr>
+
+        <tr><td class="label" style="padding-top:14px"><b>Приватность</b></td><td></td></tr>
+        <tr><td class="label">Писать на стену могут</td><td>
+          <select class="text" name="wall_who">
+            <option value="all"<%= me.wall_who === 'all' ? ' selected' : '' %>>все пользователи</option>
+            <option value="friends"<%= me.wall_who === 'friends' ? ' selected' : '' %>>только друзья</option>
+            <option value="me"<%= me.wall_who === 'me' ? ' selected' : '' %>>только я</option>
+          </select></td></tr>
+
+        <tr><td class="label"></td><td style="padding-top:10px">
+          <button class="button button_blue" type="submit">Сохранить</button></td></tr>
+      </table>
+    </form>
+  </div>
+</div>
+
+<div class="block">
+  <div class="block_head">Смена пароля</div>
+  <div class="block_body">
+    <form method="post" action="/settings/password">
+      <table class="form_table">
+        <tr><td class="label">Старый пароль</td><td><input class="text" type="password" name="old_password" size="24"></td></tr>
+        <tr><td class="label">Новый пароль</td><td><input class="text" type="password" name="password" size="24"></td></tr>
+        <tr><td class="label">Ещё раз</td><td><input class="text" type="password" name="password2" size="24"></td></tr>
+        <tr><td class="label"></td><td><button class="button" type="submit">Изменить пароль</button></td></tr>
+      </table>
+    </form>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

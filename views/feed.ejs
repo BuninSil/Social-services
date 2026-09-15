@@ -1,0 +1,27 @@
+<%- include('partials/head', { title: 'Мои Новости', nav: 'feed' }) %>
+
+<h1 class="page_title">Мои Новости</h1>
+
+<%- include('partials/wallform', { action: '/id' + me.id + '/wall' }) %>
+
+<div class="block">
+  <div class="block_head">Последние записи</div>
+  <div class="block_body tight">
+    <% if (!posts.length) { %>
+      <div class="empty" style="padding:10px">
+        Пока пусто. Добавьте друзей или вступите в группы &mdash; и здесь появятся их записи.
+      </div>
+    <% } %>
+    <% posts.forEach(function (post) { %>
+      <%- include('partials/post', {
+        post: post,
+        canDelete: post.author_id === me.id,
+        showOwner: true,
+        back: '/feed'
+      }) %>
+    <% }); %>
+  </div>
+  <%- include('partials/pagination', { page: page, pages: pages, base: '/feed' }) %>
+</div>
+
+<%- include('partials/foot') %>

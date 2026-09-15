@@ -1,0 +1,25 @@
+<%- include('partials/head', { title: album.title, nav: owner.id === me.id ? 'photos' : '' }) %>
+
+<h1 class="page_title"><%= album.title %>
+  <span class="right">
+    <a href="/photos/<%= owner.id %>">Все альбомы</a>
+    <% if (owner.id === me.id) { %> &middot; <a href="/photos/upload?album=<%= album.id %>">Загрузить сюда</a>
+      &middot; <a href="/album<%= owner.id %>_<%= album.id %>/delete" data-confirm="Удалить альбом со всеми фотографиями?">Удалить альбом</a><% } %>
+  </span>
+</h1>
+<% if (album.description) { %><div class="gray" style="margin-bottom:8px"><%= album.description %></div><% } %>
+
+<div class="block">
+  <div class="block_head">Фотографии <span class="right"><%= photos.length %></span></div>
+  <div class="block_body">
+    <% if (!photos.length) { %><div class="empty">В альбоме пока нет фотографий.</div><% } %>
+    <% photos.forEach(function (p) { %>
+      <div class="photo_item">
+        <a href="/photo<%= owner.id %>_<%= p.id %>"><img src="/uploads/<%= p.thumb %>" width="110" alt=""></a>
+      </div>
+    <% }); %>
+    <div class="clear"></div>
+  </div>
+</div>
+
+<%- include('partials/foot') %>
