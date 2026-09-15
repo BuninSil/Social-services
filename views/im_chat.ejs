@@ -1,32 +1,103 @@
-<%- include('partials/head', { title: 'Диалог с ' + u.fullName(peer), nav: 'im' }) %>
+<%- include('partials/head', { title: conv.title, nav: 'im' }) %>
 
 <h1 class="page_title">
-  <a href="/id<%= peer.id %>"><%= u.fullName(peer) %></a>
+  <% if (conv.kind === 'dm' && conv.peer) { %>
+    <a href="/id<%= conv.peer.id %>"><%= conv.title %></a>
+  <% } else { %>
+    <%= conv.title %>
+  <% } %>
   <span class="right"><a href="/im">Все диалоги</a></span>
 </h1>
-<div class="gray" style="margin-bottom:8px"><%= u.lastSeen(peer) %></div>
+
+<div class="gray" style="margin-bottom:8px">
+  <% if (conv.kind === 'dm' && conv.peer) { %>
+    <span id="peer_state" data-peer="<%= conv.peer.id %>">
+      <%= online(conv.peer.id) ? 'сейчас на сайте' : u.lastSeen(conv.peer) %>
+    </span>
+  <% } else { %>
+    <%= u.pluralCount(members.length, 'участник', 'участника', 'участников') %>:
+    <% members.forEach(function (m, i) { %><a href="/id<%= m.id %>"><%= m.first_name %></a><%= i < members.length - 1 ? ', ' : '' %><% }); %>
+  <% } %>
+</div>
+
+<% if (error) { %><div class="error"><%= error %></div><% } %>
 
 <div class="block">
-  <div class="block_head">История переписки</div>
-  <div id="chat" data-peer="<%= peer.id %>">
+  <div class="block_head">История переписки
+    <% if (conv.kind === 'chat') { %>
+      <span class="right"><a href="#" id="chat_settings_link">настройки беседы</a></span>
+    <% } %>
+  </div>
+
+  <% if (conv.kind === 'chat') { %>
+    <div class="block_body" id="chat_settings" hidden>
+      <form method="post" action="/im/c<%= conv.id %>/title" class="inline_form">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <input class="text" type="text" name="title" value="<%= conv.title %>" maxlength="80" size="30">
+        <button class="button button_small" type="submit"<%= isAdmin ? '' : ' disabled' %>>Переименовать</button>
+        <% if (!isAdmin) { %><span class="gray small">переименовать может создатель</span><% } %>
+      </form>
+      <form method="post" action="/im/c<%= conv.id %>/invite" class="inline_form" style="padding-top:6px">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <select class="text" name="user_id">
+          <% (typeof invitable !== 'undefined' ? invitable : []).forEach(function (f) { %>
+            <option value="<%= f.id %>"><%= u.fullName(f) %></option>
+          <% }); %>
+        </select>
+        <button class="button button_small" type="submit">Пригласить друга</button>
+      </form>
+      <div style="padding-top:6px">
+        <%- act(csrf, '/im/c' + conv.id + '/leave', 'Выйти из беседы', { confirm: 'Выйти из беседы?' }) %>
+      </div>
+    </div>
+  <% } %>
+
+  <div id="chat" data-conv="<%= conv.id %>">
     <% if (!messages.length) { %><div class="empty">Сообщений пока нет. Напишите первым.</div><% } %>
     <% messages.forEach(function (m) { %>
-      <div class="msg <%= m.from_id === me.id ? 'out' : 'in' %>">
-        <div class="ava"><img src="<%= avatar(m.from_id === me.id ? me : peer, 'thumb') %>" width="32" height="32" alt=""></div>
+      <div class="msg <%= m.from_id === me.id ? 'out' : 'in' %>" id="msg<%= m.id %>">
+        <div class="ava"><a href="/id<%= m.from_id %>"><img src="<%= avatar(m.author, 'thumb') %>"
+          width="32" height="32" alt=""></a></div>
         <div class="body">
-          <a class="author" href="/id<%= m.from_id %>"><%= m.from_id === me.id ? me.first_name : peer.first_name %></a>
+          <a class="author" href="/id<%= m.from_id %>"><%= m.author ? m.author.first_name : 'Кто-то' %></a>
           <span class="date"><%= u.vkDate(m.created_at) %></span>
-          <div><%- u.text2html(m.text) %></div>
+          <% if (m.edited_at) { %><span class="date">(изменено)</span><% } %>
+          <% if (m.from_id === me.id) { %>
+            <span class="msg_acts">
+              <%- act(csrf, '/message/' + m.id + '/delete', 'удалить', { back: '/im/c' + conv.id, cls: 'small_act gray', confirm: 'Удалить сообщение?' }) %>
+            </span>
+          <% } %>
+          <% if (m.text) { %><div class="mtext"><%- u.text2html(m.text) %></div><% } %>
+          <%- include('partials/attachments', { items: m.attachments }) %>
         </div>
         <div class="clear"></div>
       </div>
     <% }); %>
   </div>
+
+  <div id="typing_line" class="gray small" hidden></div>
+
   <div class="block_foot">
-    <form id="send_form" method="post" action="/im/<%= peer.id %>">
-      <textarea class="text" name="text" maxlength="4000" placeholder="Введите сообщение... (Ctrl+Enter — отправить)"></textarea>
-      <div class="sf_foot"><button class="button button_blue" type="submit">Отправить</button></div>
-    </form>
+    <% if (canWrite) { %>
+      <form id="send_form" method="post" action="/im/c<%= conv.id %>" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <textarea class="text" name="text" maxlength="4000"
+                  placeholder="Введите сообщение... (Ctrl+Enter — отправить)"></textarea>
+        <div class="sf_foot">
+          <button class="button button_blue" type="submit">Отправить</button>
+          <label class="attach_label">Прикрепить:
+            <input type="file" name="files" multiple
+                   accept="image/*,video/*,audio/*,.pdf,.zip,.rar,.7z,.txt,.md,.csv,.log">
+          </label>
+          <span id="voice_box" hidden>
+            <button type="button" class="button" id="voice_btn">Записать голосовое</button>
+            <span id="voice_state" class="gray small"></span>
+          </span>
+        </div>
+      </form>
+    <% } else { %>
+      <div class="gray">Этот пользователь принимает сообщения только от друзей.</div>
+    <% } %>
   </div>
 </div>
 

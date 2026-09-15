@@ -12,24 +12,53 @@ router.get('/feed', requireAuth, (req, res) => {
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
   const posts = M.feedPosts(req.user.id, PER_PAGE + 1, (page - 1) * PER_PAGE);
   const hasMore = posts.length > PER_PAGE;
+
   res.render('feed', {
     posts: posts.slice(0, PER_PAGE),
     page,
     pages: hasMore ? page + 1 : page,
+    uploadError: req.query.err ? String(req.query.err).slice(0, 300) : null,
   });
 });
 
+/** Поиск: люди, записи и группы — как три вкладки на одной странице. */
 router.get('/search', requireAuth, (req, res) => {
   const q = String(req.query.q || '').trim();
-  const users = M.searchUsers(q, 100).filter((p) => p.id !== req.user.id);
+  const tab = ['people', 'posts', 'groups'].includes(req.query.tab) ? req.query.tab : 'people';
+
+  const people = tab === 'people'
+    ? M.searchUsers(q, 100).filter((p) => p.id !== req.user.id && !M.blockedEither(req.user.id, p.id))
+    : [];
   const statuses = {};
-  for (const p of users) statuses[p.id] = M.friendStatus(req.user.id, p.id);
+  for (const p of people) statuses[p.id] = M.friendStatus(req.user.id, p.id);
+
+  const groups = tab === 'groups'
+    ? db.prepare('SELECT * FROM groups WHERE name LIKE ? OR description LIKE ? ORDER BY name LIMIT 100')
+      .all('%' + q + '%', '%' + q + '%')
+      .map((g) => Object.assign({}, g, { members: M.groupsQ.membersCount.get(g.id).n }))
+    : [];
+
   res.render('search', {
-    q, users, statuses,
+    q,
+    tab,
+    users: people,
+    statuses,
+    posts: tab === 'posts' && q ? M.searchPosts(req.user.id, q, 50) : [],
+    groups,
     total: db.prepare('SELECT COUNT(*) n FROM users').get().n,
   });
 });
 
 router.get('/help', (req, res) => res.render('help', {}));
+
+/**
+ * Короткое имя страницы: /ivan ведёт на профиль, как в ВК.
+ * Стоит последним — сюда доходит только то, что не совпало с обычными адресами.
+ */
+router.get(/^\/([a-zA-Z0-9_.]{3,20})$/, requireAuth, (req, res, next) => {
+  const user = M.users.byLogin.get(req.params[0]);
+  if (!user) return next();
+  res.redirect('/id' + user.id);
+});
 
 module.exports = router;

@@ -1,0 +1,39 @@
+<%- include('partials/head', { title: 'Мои Ответы', nav: 'notifications' }) %>
+
+<h1 class="page_title">Мои Ответы
+  <span class="right"><%- act(csrf, '/notifications/read', 'Отметить всё прочитанным', { back: '/notifications' }) %></span>
+</h1>
+
+<div class="block">
+  <div class="block_body tight">
+    <% if (!items.length) { %>
+      <div class="empty" style="padding:10px">Пока ничего не происходило.</div>
+    <% } %>
+    <% items.forEach(function (n) { %>
+      <div class="notif<%= n.is_read ? '' : ' fresh' %>">
+        <div class="ava">
+          <% if (n.actor) { %>
+            <a href="/id<%= n.actor.id %>"><img src="<%= avatar(n.actor, 'thumb') %>" width="40" height="40" alt=""></a>
+          <% } else { %>
+            <img src="/img/camera_200.svg" width="40" height="40" alt="">
+          <% } %>
+        </div>
+        <div class="body">
+          <div>
+            <% if (n.actor) { %>
+              <a class="author" href="/id<%= n.actor.id %>"><%= n.actor.first_name %> <%= n.actor.last_name %></a>
+            <% } %>
+            <%= n.phrase %>
+            <% if (n.url) { %><a href="<%= n.url %>">перейти</a><% } %>
+            <span class="date"><%= u.vkDate(n.created_at) %></span>
+          </div>
+          <% if (n.preview) { %><div class="gray preview"><%= u.trim(n.preview, 160) %></div><% } %>
+        </div>
+        <div class="clear"></div>
+      </div>
+    <% }); %>
+  </div>
+  <%- include('partials/pagination', { page: page, pages: pages, base: '/notifications' }) %>
+</div>
+
+<%- include('partials/foot') %>

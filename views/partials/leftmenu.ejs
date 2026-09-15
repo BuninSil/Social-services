@@ -1,11 +1,14 @@
 <ul id="left_menu">
   <li><a href="/id<%= me.id %>" class="<%= nav === 'profile' ? 'sel' : '' %>">Моя Страница</a></li>
+  <li><a href="/feed" class="<%= nav === 'feed' ? 'sel' : '' %>">Мои Новости</a></li>
+  <li><a href="/notifications" id="menu_notifications" class="<%= nav === 'notifications' ? 'sel' : '' %>"><% if (counters.notifications) { %><span class="cnt"><%= counters.notifications %></span><% } %>Мои Ответы</a></li>
+  <li><a href="/im" id="menu_messages" class="<%= nav === 'im' ? 'sel' : '' %>"><% if (counters.messages) { %><span class="cnt"><%= counters.messages %></span><% } %>Мои Сообщения</a></li>
   <li><a href="/friends" id="menu_requests" class="<%= nav === 'friends' ? 'sel' : '' %>"><% if (counters.requests) { %><span class="cnt"><%= counters.requests %></span><% } %>Мои Друзья</a></li>
   <li><a href="/photos" class="<%= nav === 'photos' ? 'sel' : '' %>">Мои Фотографии</a></li>
+  <li><a href="/video" class="<%= nav === 'video' ? 'sel' : '' %>">Мои Видеозаписи</a></li>
   <li><a href="/audio" class="<%= nav === 'audio' ? 'sel' : '' %>">Мои Аудиозаписи</a></li>
-  <li><a href="/im" id="menu_messages" class="<%= nav === 'im' ? 'sel' : '' %>"><% if (counters.messages) { %><span class="cnt"><%= counters.messages %></span><% } %>Мои Сообщения</a></li>
+  <li><a href="/docs" class="<%= nav === 'docs' ? 'sel' : '' %>">Мои Документы</a></li>
   <li><a href="/groups" class="<%= nav === 'groups' ? 'sel' : '' %>">Мои Группы</a></li>
-  <li><a href="/feed" class="<%= nav === 'feed' ? 'sel' : '' %>">Мои Новости</a></li>
-  <li><a href="/search" class="<%= nav === 'search' ? 'sel' : '' %>">Поиск людей</a></li>
+  <li><a href="/search" class="<%= nav === 'search' ? 'sel' : '' %>">Поиск</a></li>
   <li><a href="/settings" class="<%= nav === 'settings' ? 'sel' : '' %>">Мои Настройки</a></li>
 </ul>

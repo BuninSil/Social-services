@@ -1,23 +1,35 @@
 <%- include('partials/head', { title: 'Мои Сообщения', nav: 'im' }) %>
 
 <h1 class="page_title">Мои Сообщения
-  <span class="right"><a href="/friends">Написать другу</a></span></h1>
+  <span class="right">
+    <a href="/im/new">Создать беседу</a> &middot;
+    <a href="/im/search">Поиск по переписке</a>
+  </span>
+</h1>
 
 <div class="block">
-  <div class="block_head">Диалоги <span class="right"><%= dialogs.length %></span></div>
+  <div class="block_head">Диалоги и беседы <span class="right"><%= dialogs.length %></span></div>
   <div class="block_body tight">
     <% if (!dialogs.length) { %>
-      <div class="empty" style="padding:10px">Переписок пока нет.</div>
+      <div class="empty" style="padding:10px">Переписок пока нет. Напишите кому-нибудь из <a href="/friends">друзей</a>.</div>
     <% } %>
     <% dialogs.forEach(function (d) { %>
-      <div class="dlg_row <%= d.unread ? 'unread' : '' %>">
-        <div class="date"><%= u.shortDate(d.created_at) %></div>
-        <div class="ava"><a href="/im/<%= d.peer.id %>"><img src="<%= avatar(d.peer, 'thumb') %>" width="50" height="50" alt=""></a></div>
+      <div class="dlg_row <%= d.unread ? 'unread' : '' %>" id="dlg<%= d.id %>">
+        <div class="date"><%= d.last ? u.shortDate(d.last.created_at) : '' %></div>
+        <div class="ava"><a href="/im/c<%= d.id %>"><img src="<%= convAvatar(d) %>" width="50" height="50" alt=""></a></div>
         <div class="body">
-          <div class="name"><a href="/im/<%= d.peer.id %>"><%= u.fullName(d.peer) %></a>
-            <% if (d.unread) { %><span class="cnt" style="background:#d14836;color:#fff;padding:0 4px"><%= d.unread %></span><% } %>
+          <div class="name">
+            <a href="/im/c<%= d.id %>"><%= d.title %></a>
+            <% if (d.kind === 'chat') { %><span class="gray small">(беседа, <%= d.membersCount %>)</span><% } %>
+            <% if (d.peer && online(d.peer.id)) { %><span class="online_dot">●</span><% } %>
+            <% if (d.unread) { %><span class="dlg_cnt"><%= d.unread %></span><% } %>
           </div>
-          <div class="preview"><%= d.outgoing ? 'Вы: ' : '' %><%= d.preview %></div>
+          <div class="preview">
+            <% if (d.last) { %>
+              <% if (d.last.from_id === me.id) { %>Вы: <% } %>
+              <%= d.last.text ? u.trim(d.last.text, 90) : 'вложение' %>
+            <% } else { %><span class="gray">нет сообщений</span><% } %>
+          </div>
         </div>
         <div class="clear"></div>
       </div>

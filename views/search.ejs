@@ -1,42 +1,87 @@
-<%- include('partials/head', { title: 'Поиск людей', nav: 'search', q: q }) %>
+<%- include('partials/head', { title: 'Поиск', nav: 'search', q: q }) %>
 
-<h1 class="page_title">Поиск людей</h1>
+<h1 class="page_title">Поиск</h1>
 
 <div class="block">
   <div class="block_body">
     <form method="get" action="/search">
-      <input class="text" type="text" name="q" value="<%= q %>" size="40" placeholder="имя, фамилия или логин">
+      <input type="hidden" name="tab" value="<%= tab %>">
+      <input class="text" type="text" name="q" value="<%= q %>" size="40" placeholder="имя, слово из записи, название группы">
       <button class="button" type="submit">Найти</button>
       <span class="gray" style="margin-left:10px">Всего на сайте: <%= total %></span>
     </form>
   </div>
 </div>
 
-<div class="block">
-  <div class="block_head"><%= q ? 'Результаты поиска' : 'Все пользователи' %>
-    <span class="right"><%= users.length %></span></div>
-  <div class="block_body tight">
-    <% if (!users.length) { %><div class="empty" style="padding:10px">Никого не нашлось.</div><% } %>
-    <% users.forEach(function (p) { %>
-      <div class="people_row">
-        <div class="acts">
-          <a href="/im/<%= p.id %>">Написать</a>
-          <% var st = statuses[p.id]; %>
-          <% if (st === 'none') { %><a href="/friends/add/<%= p.id %>">В друзья</a>
-          <% } else if (st === 'out') { %><span class="gray small">заявка отправлена</span>
-          <% } else if (st === 'in') { %><a href="/friends/add/<%= p.id %>">Принять заявку</a>
-          <% } else if (st === 'friends') { %><span class="gray small">у Вас в друзьях</span><% } %>
-        </div>
-        <div class="ava"><a href="/id<%= p.id %>"><img src="<%= avatar(p, 'thumb') %>" width="60" height="60" alt=""></a></div>
-        <div class="body">
-          <div class="name"><a href="/id<%= p.id %>"><%= u.fullName(p) %></a></div>
-          <div class="info"><%= u.lastSeen(p) %><% if (p.city) { %>, <%= p.city %><% } %></div>
-          <% if (p.status) { %><div class="gray"><%= p.status %></div><% } %>
-        </div>
-        <div class="clear"></div>
-      </div>
-    <% }); %>
-  </div>
+<div class="tabs">
+  <a class="<%= tab === 'people' ? 'sel' : '' %>" href="/search?tab=people&amp;q=<%= encodeURIComponent(q) %>">Люди</a>
+  <a class="<%= tab === 'posts' ? 'sel' : '' %>" href="/search?tab=posts&amp;q=<%= encodeURIComponent(q) %>">Записи</a>
+  <a class="<%= tab === 'groups' ? 'sel' : '' %>" href="/search?tab=groups&amp;q=<%= encodeURIComponent(q) %>">Группы</a>
 </div>
+
+<% if (tab === 'people') { %>
+  <div class="block">
+    <div class="block_head"><%= q ? 'Найденные люди' : 'Все пользователи' %>
+      <span class="right"><%= users.length %></span></div>
+    <div class="block_body tight">
+      <% if (!users.length) { %><div class="empty" style="padding:10px">Никого не нашлось.</div><% } %>
+      <% users.forEach(function (p) { %>
+        <div class="people_row">
+          <div class="acts">
+            <a href="/im/<%= p.id %>">Написать</a>
+            <% var st = statuses[p.id]; %>
+            <% if (st === 'none') { %><%- act(csrf, '/friends/add/' + p.id, 'В друзья', { back: '/search?tab=people&q=' + encodeURIComponent(q) }) %>
+            <% } else if (st === 'out') { %><span class="gray small">заявка отправлена</span>
+            <% } else if (st === 'in') { %><%- act(csrf, '/friends/add/' + p.id, 'Принять заявку', { back: '/search?tab=people&q=' + encodeURIComponent(q) }) %>
+            <% } else if (st === 'friends') { %><span class="gray small">у Вас в друзьях</span><% } %>
+          </div>
+          <div class="ava"><a href="/id<%= p.id %>"><img src="<%= avatar(p, 'thumb') %>" width="60" height="60" alt=""></a></div>
+          <div class="body">
+            <div class="name"><a href="/id<%= p.id %>"><%= u.fullName(p) %></a>
+              <% if (online(p.id)) { %><span class="online_dot">●</span><% } %></div>
+            <div class="info"><%= u.lastSeen(p) %><% if (p.city) { %>, <%= p.city %><% } %></div>
+            <% if (p.status) { %><div class="gray"><%= p.status %></div><% } %>
+          </div>
+          <div class="clear"></div>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+<% } else if (tab === 'posts') { %>
+  <div class="block">
+    <div class="block_head">Записи <span class="right"><%= posts.length %></span></div>
+    <div class="block_body tight">
+      <% if (!posts.length) { %>
+        <div class="empty" style="padding:10px"><%= q ? 'Записей не нашлось.' : 'Введите слово для поиска по записям.' %></div>
+      <% } %>
+      <% posts.forEach(function (post) { %>
+        <%- include('partials/post', {
+          post: post,
+          canDelete: post.author_id === me.id,
+          showOwner: true,
+          back: '/search?tab=posts&q=' + encodeURIComponent(q)
+        }) %>
+      <% }); %>
+    </div>
+  </div>
+<% } else { %>
+  <div class="block">
+    <div class="block_head">Группы <span class="right"><%= groups.length %></span></div>
+    <div class="block_body tight">
+      <% if (!groups.length) { %><div class="empty" style="padding:10px">Групп не нашлось.</div><% } %>
+      <% groups.forEach(function (g) { %>
+        <div class="group_row">
+          <div class="ava"><a href="/club<%= g.id %>"><img src="<%= gavatar(g) %>" width="60" height="60" alt=""></a></div>
+          <div class="body">
+            <div class="name"><a href="/club<%= g.id %>"><%= g.name %></a></div>
+            <div class="gray"><%= u.pluralCount(g.members, 'участник', 'участника', 'участников') %></div>
+            <% if (g.description) { %><div><%= u.trim(g.description, 140) %></div><% } %>
+          </div>
+          <div class="clear"></div>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+<% } %>
 
 <%- include('partials/foot') %>

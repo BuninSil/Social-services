@@ -1,0 +1,35 @@
+<%- include('partials/head', { title: 'Новая беседа', nav: 'im' }) %>
+
+<h1 class="page_title">Создание беседы</h1>
+<% if (error) { %><div class="error"><%= error %></div><% } %>
+
+<div class="block">
+  <div class="block_body">
+    <form method="post" action="/im/new">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <div class="form_row">
+        <div class="lbl">Название беседы</div>
+        <input class="text" type="text" name="title" size="40" maxlength="80" placeholder="Например: Сходка в пятницу">
+      </div>
+      <div class="form_row">
+        <div class="lbl">Кого позвать</div>
+        <% if (!friends.length) { %>
+          <div class="gray">Сначала добавьте друзей — беседу можно создать только с ними.</div>
+        <% } %>
+        <% friends.forEach(function (f) { %>
+          <label class="member_pick">
+            <input type="checkbox" name="members" value="<%= f.id %>">
+            <img src="<%= avatar(f, 'thumb') %>" width="30" height="30" alt="">
+            <%= u.fullName(f) %>
+          </label>
+        <% }); %>
+      </div>
+      <div style="padding-top:8px">
+        <button class="button button_blue" type="submit">Создать</button>
+        <a class="button" href="/im">Отмена</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="/css/vo.css">
 <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
 </head>
-<body<% if (me) { %> data-uid="<%= me.id %>"<% } %>>
+<body<% if (me) { %> data-uid="<%= me.id %>" data-csrf="<%= csrf %>"<% } %>>
 
 <div id="header">
   <div id="header_in">
@@ -14,7 +14,7 @@
     <% if (me) { %>
       <form id="head_search" action="/search" method="get">
         <input class="head_q" type="text" name="q" value="<%= typeof q !== 'undefined' ? q : '' %>"
-               placeholder="поиск людей">
+               placeholder="поиск людей и записей">
       </form>
       <div id="head_nav">
         <a href="/id<%= me.id %>"><%= me.first_name %> <%= me.last_name %></a>
@@ -23,7 +23,10 @@
         <span class="sep">|</span>
         <a href="/help">Помощь</a>
         <span class="sep">|</span>
-        <a href="/logout">Выход</a>
+        <form class="act" method="post" action="/logout">
+          <input type="hidden" name="_csrf" value="<%= csrf %>">
+          <button type="submit" class="link_btn head_exit">Выход</button>
+        </form>
       </div>
     <% } else { %>
       <div id="head_nav"><a href="/login">Вход</a></div>
@@ -32,8 +35,7 @@
   </div>
 </div>
 
-<div id="live_notice" style="display:none;position:fixed;top:40px;right:20px;z-index:50;background:#fff8d6;
-  border:1px solid #d9c87a;padding:6px 10px;max-width:260px;"></div>
+<div id="live_notice" hidden></div>
 
 <div id="page">
 <% if (me) { %>

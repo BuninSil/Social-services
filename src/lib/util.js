@@ -84,14 +84,31 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
-/** Экранирует текст, разворачивает ссылки и переводы строк. */
+/** Логины упоминаний: @ivan. Возвращает список без повторов. */
+function extractMentions(str) {
+  const found = new Set();
+  const re = /@([a-zA-Z0-9_.]{3,20})/g;
+  let match;
+  while ((match = re.exec(String(str || '')))) found.add(match[1].toLowerCase());
+  return [...found];
+}
+
+/** Экранирует текст, разворачивает ссылки, упоминания, хештеги и переводы строк. */
 function text2html(str) {
-  const safe = escapeHtml(str);
-  const linked = safe.replace(/(https?:\/\/[^\s<]+)/g, (url) => {
+  let html = escapeHtml(str);
+
+  html = html.replace(/(https?:\/\/[^\s<]+)/g, (url) => {
     const short = url.length > 60 ? url.slice(0, 57) + '...' : url;
     return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + short + '</a>';
   });
-  return linked.replace(/\r?\n/g, '<br>');
+
+  html = html.replace(/(^|[\s(])@([a-zA-Z0-9_.]{3,20})/g,
+    (all, before, login) => before + '<a href="/' + login + '">@' + login + '</a>');
+
+  html = html.replace(/(^|[\s(])#([\wА-Яа-яЁё]{2,40})/g,
+    (all, before, tag) => before + '<a href="/search?q=%23' + encodeURIComponent(tag) + '">#' + tag + '</a>');
+
+  return html.replace(/\r?\n/g, '<br>');
 }
 
 function fullName(u) {
@@ -105,5 +122,5 @@ function trim(str, max) {
 
 module.exports = {
   MONTHS_SHORT, MONTHS_FULL, now, pad, plural, pluralCount,
-  vkDate, shortDate, lastSeen, formatBday, escapeHtml, text2html, fullName, trim,
+  vkDate, shortDate, lastSeen, formatBday, escapeHtml, text2html, extractMentions, fullName, trim,
 };

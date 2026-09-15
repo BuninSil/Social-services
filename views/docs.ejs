@@ -1,0 +1,38 @@
+<%- include('partials/head', { title: 'Мои Документы', nav: 'docs' }) %>
+
+<h1 class="page_title">Мои документы
+  <span class="right"><%= u.pluralCount(docs.length, 'файл', 'файла', 'файлов') %></span></h1>
+<% if (error) { %><div class="error"><%= error %></div><% } %>
+
+<div class="block">
+  <div class="block_head">Загрузить документ</div>
+  <div class="block_body">
+    <form method="post" action="/docs/upload" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <input type="file" name="doc">
+      <button class="button button_blue" type="submit">Загрузить</button>
+      <div class="gray small" style="padding-top:4px">
+        Изображения, аудио, видео, PDF, архивы и текстовые файлы. До 50 МБ.
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="block">
+  <div class="block_head">Список</div>
+  <div class="block_body tight">
+    <% if (!docs.length) { %><div class="empty" style="padding:10px">Документов пока нет.</div><% } %>
+    <% docs.forEach(function (d) { %>
+      <div class="doc_row">
+        <div class="acts"><%- act(csrf, '/doc/' + d.id + '/delete', 'удалить', { back: '/docs', cls: 'small_act gray', confirm: 'Удалить документ?' }) %></div>
+        <div class="body">
+          <a href="/doc<%= d.owner_id %>_<%= d.id %>"><%= d.name %></a>
+          <div class="gray small"><%= d.ext.toUpperCase() %> · <%= fileSize(d.size) %> · <%= u.vkDate(d.created_at) %></div>
+        </div>
+        <div class="clear"></div>
+      </div>
+    <% }); %>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

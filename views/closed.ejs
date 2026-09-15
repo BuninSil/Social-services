@@ -1,0 +1,25 @@
+<%- include('partials/head', { title: u.fullName(user), nav: '' }) %>
+
+<div id="profile_left">
+  <img class="pavatar" src="<%= avatar(user, 'full') %>" width="200" alt="">
+</div>
+
+<div id="profile_right">
+  <div class="pname"><%= u.fullName(user) %></div>
+  <div class="block" style="margin-top:10px">
+    <div class="block_head">Страница закрыта</div>
+    <div class="block_body">
+      <p><%= reason %></p>
+      <div style="padding-top:10px">
+        <% if (iBlockedThem) { %>
+          <%- act(csrf, '/unblock/' + user.id, 'Убрать из чёрного списка', { back: '/id' + user.id }) %>
+        <% } else { %>
+          <%- act(csrf, '/friends/add/' + user.id, 'Добавить в друзья', { back: '/id' + user.id }) %>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="clear"></div>
+
+<%- include('partials/foot') %>

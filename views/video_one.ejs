@@ -1,0 +1,55 @@
+<%- include('partials/head', { title: video.title, nav: '' }) %>
+
+<h1 class="page_title"><%= video.title %>
+  <span class="right"><a href="/video/<%= owner.id %>">Все видеозаписи</a></span></h1>
+
+<div class="block">
+  <div class="block_body" style="text-align:center;background:#f7f7f7">
+    <video controls preload="metadata" style="max-width:720px;width:100%"
+           <% if (video.poster) { %>poster="/uploads/<%= video.poster %>"<% } %>
+           src="/uploads/<%= video.file %>"></video>
+  </div>
+  <div class="block_foot">
+    <span class="gray">
+      <%= u.vkDate(video.created_at) %> · <%= fileSize(video.size) %><% if (video.duration) { %> · <%= duration(video.duration) %><% } %>
+      · <a href="/id<%= owner.id %>"><%= u.fullName(owner) %></a>
+    </span>
+    <% if (owner.id === me.id) { %>
+      <span class="right"><%- act(csrf, '/video/' + video.id + '/delete', 'Удалить', { back: '/video', confirm: 'Удалить видеозапись?' }) %></span>
+    <% } %>
+  </div>
+</div>
+
+<% if (video.description) { %>
+  <div class="block"><div class="block_body"><%- u.text2html(video.description) %></div></div>
+<% } %>
+
+<div class="block">
+  <div class="block_head">Комментарии <span class="right"><%= comments.length %></span></div>
+  <div class="block_body">
+    <% if (!comments.length) { %><div class="empty">Комментариев пока нет.</div><% } %>
+    <% comments.forEach(function (c) { %>
+      <div class="reply">
+        <div class="ava"><a href="/id<%= c.author_id %>"><img src="<%= avatar({ avatar: c.avatar }, 'thumb') %>"
+          width="32" height="32" alt=""></a></div>
+        <div class="body">
+          <a class="author" href="/id<%= c.author_id %>"><%= c.first_name %> <%= c.last_name %></a>
+          <span class="date"><%= u.vkDate(c.created_at) %></span>
+          <% if (c.author_id === me.id || owner.id === me.id) { %>
+            <%- act(csrf, '/comment/' + c.id + '/delete', 'удалить', { back: '/video' + owner.id + '_' + video.id, cls: 'small_act gray' }) %>
+          <% } %>
+          <div><%- u.text2html(c.text) %></div>
+        </div>
+        <div class="clear"></div>
+      </div>
+    <% }); %>
+    <form method="post" action="/comment?type=video&amp;id=<%= video.id %>" style="padding-top:8px">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <input type="hidden" name="back" value="/video<%= owner.id %>_<%= video.id %>">
+      <textarea class="text wide" name="text" style="height:40px" placeholder="Ваш комментарий..."></textarea>
+      <div style="padding-top:5px"><button class="button" type="submit">Отправить</button></div>
+    </form>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

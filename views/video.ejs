@@ -1,0 +1,50 @@
+<%- include('partials/head', { title: 'Видеозаписи', nav: owner.id === me.id ? 'video' : '' }) %>
+
+<h1 class="page_title">
+  <% if (owner.id === me.id) { %>Мои видеозаписи<% } else { %>Видеозаписи &mdash;
+    <a href="/id<%= owner.id %>"><%= u.fullName(owner) %></a><% } %>
+  <span class="right"><%= u.pluralCount(videos.length, 'запись', 'записи', 'записей') %></span>
+</h1>
+<% if (error) { %><div class="error"><%= error %></div><% } %>
+
+<% if (owner.id === me.id) { %>
+  <div class="block">
+    <div class="block_head">Загрузить видео</div>
+    <div class="block_body">
+      <form method="post" action="/video/upload" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <table class="form_table">
+          <tr><td class="label">Название</td><td><input class="text" type="text" name="title" size="40" maxlength="120"></td></tr>
+          <tr><td class="label">Описание</td><td><textarea class="text wide" name="description" style="height:40px" maxlength="1000"></textarea></td></tr>
+          <tr><td class="label">Файл</td><td><input type="file" name="video" accept="video/mp4,video/webm">
+            <div class="gray small">MP4 или WebM, до 256 МБ.
+              <% if (!ffmpeg) { %>Обложка и длительность появятся, если на сервере установлен ffmpeg.<% } %></div></td></tr>
+          <tr><td class="label"></td><td><button class="button button_blue" type="submit">Загрузить</button></td></tr>
+        </table>
+      </form>
+    </div>
+  </div>
+<% } %>
+
+<div class="block">
+  <div class="block_head">Список</div>
+  <div class="block_body">
+    <% if (!videos.length) { %><div class="empty">Видеозаписей пока нет.</div><% } %>
+    <% videos.forEach(function (v) { %>
+      <div class="video_item">
+        <a href="/video<%= owner.id %>_<%= v.id %>">
+          <img src="<%= v.poster ? '/uploads/' + v.poster : '/img/video_200.svg' %>" width="150" height="110" alt="">
+          <% if (v.duration) { %><span class="vdur"><%= duration(v.duration) %></span><% } %>
+        </a>
+        <div class="t"><a href="/video<%= owner.id %>_<%= v.id %>"><%= v.title %></a></div>
+        <div class="c gray"><%= fileSize(v.size) %> · <%= u.vkDate(v.created_at) %></div>
+        <% if (owner.id === me.id) { %>
+          <%- act(csrf, '/video/' + v.id + '/delete', 'удалить', { back: '/video', cls: 'small_act gray', confirm: 'Удалить видеозапись?' }) %>
+        <% } %>
+      </div>
+    <% }); %>
+    <div class="clear"></div>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

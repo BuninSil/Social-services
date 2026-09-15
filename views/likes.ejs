@@ -1,0 +1,22 @@
+<%- include('partials/head', { title: 'Отметки «Мне нравится»', nav: '' }) %>
+
+<h1 class="page_title">Понравилось
+  <span class="right"><a href="<%= back %>">Назад</a></span></h1>
+
+<div class="block">
+  <div class="block_body tight">
+    <% if (!users.length) { %><div class="empty" style="padding:10px">Пока никто не отметил.</div><% } %>
+    <% users.forEach(function (p) { %>
+      <div class="people_row">
+        <div class="ava"><a href="/id<%= p.id %>"><img src="<%= avatar(p, 'thumb') %>" width="50" height="50" alt=""></a></div>
+        <div class="body">
+          <div class="name"><a href="/id<%= p.id %>"><%= u.fullName(p) %></a></div>
+          <div class="info"><%= u.lastSeen(p) %></div>
+        </div>
+        <div class="clear"></div>
+      </div>
+    <% }); %>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

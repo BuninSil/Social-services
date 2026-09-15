@@ -11,6 +11,7 @@
     <div class="block_head">Загрузить аудиозапись</div>
     <div class="block_body">
       <form method="post" action="/audio/upload" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
         <table class="form_table">
           <tr><td class="label">Исполнитель</td><td><input class="text" type="text" name="artist" size="30" maxlength="80"></td></tr>
           <tr><td class="label">Название</td><td><input class="text" type="text" name="title" size="30" maxlength="80"></td></tr>
@@ -31,11 +32,12 @@
       <div class="audio_row">
         <div class="acts">
           <% if (owner.id === me.id) { %>
-            <a href="/audio/<%= a.id %>/delete" data-confirm="Удалить аудиозапись?">удалить</a>
+            <%- act(csrf, '/audio/' + a.id + '/delete', 'удалить', { back: '/audio', cls: 'small_act gray', confirm: 'Удалить аудиозапись?' }) %>
           <% } %>
         </div>
         <div class="ttl">
           <b><%= a.artist %></b> &ndash; <%= a.title %>
+          <% if (a.duration) { %><span class="gray"> · <%= duration(a.duration) %></span><% } %>
           <audio controls preload="none" src="/uploads/<%= a.file %>"></audio>
         </div>
         <div class="clear"></div>

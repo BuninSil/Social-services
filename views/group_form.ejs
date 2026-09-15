@@ -6,6 +6,7 @@
 <div class="block">
   <div class="block_body">
     <form method="post" action="<%= group ? '/club' + group.id + '/edit' : '/groups/new' %>" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
       <table class="form_table">
         <tr><td class="label">Название</td><td>
           <input class="text wide" type="text" name="name" maxlength="80" value="<%= group ? group.name : '' %>"></td></tr>

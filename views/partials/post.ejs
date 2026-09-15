@@ -1,4 +1,4 @@
-<div class="post" id="post<%= post.id %>">
+<div class="post<%= post.pinned ? ' pinned' : '' %>" id="post<%= post.id %>">
   <div class="ava">
     <a href="/id<%= post.author.id %>"><img src="<%= avatar(post.author, 'thumb') %>" width="50" alt=""></a>
   </div>
@@ -13,28 +13,40 @@
         <span class="to">&rarr;</span>
         <a href="/club<%= post.owner.id %>"><%= post.owner.name %></a>
       <% } %>
-      <span class="date"><%= u.vkDate(post.created_at) %></span>
+      <a class="date" href="/post/<%= post.id %>"><%= u.vkDate(post.created_at) %></a>
+      <% if (post.edited_at) { %><span class="date">(изменено)</span><% } %>
+      <% if (post.pinned) { %><span class="pin_mark">закреплённая запись</span><% } %>
     </div>
-    <div class="ptext"><%- u.text2html(post.text) %></div>
-    <% if (post.photo) { %>
-      <div class="attach">
-        <a href="/photo<%= post.photo.owner_id %>_<%= post.photo.id %>">
-          <img src="/uploads/<%= post.photo.file %>" style="max-width:400px" alt=""></a>
-      </div>
-    <% } %>
-    <% if (post.audio) { %>
-      <div class="attach audio_row" style="border:0;padding:4px 0">
-        <div class="ttl"><b><%= post.audio.artist %></b> &ndash; <%= post.audio.title %>
-          <audio controls preload="none" src="/uploads/<%= post.audio.file %>"></audio>
+
+    <% if (post.text) { %><div class="ptext"><%- u.text2html(post.text) %></div><% } %>
+    <%- include('attachments', { items: post.attachments }) %>
+
+    <% if (post.source) { %>
+      <div class="repost">
+        <div class="rhead">
+          <a href="/id<%= post.source.author.id %>"><img src="<%= avatar(post.source.author, 'thumb') %>"
+            width="32" height="32" alt=""></a>
+          <a class="author" href="/id<%= post.source.author.id %>"><%= u.fullName(post.source.author) %></a>
+          <a class="date" href="/post/<%= post.source.id %>"><%= u.vkDate(post.source.created_at) %></a>
         </div>
+        <% if (post.source.text) { %><div class="ptext"><%- u.text2html(post.source.text) %></div><% } %>
+        <%- include('attachments', { items: post.source.attachments }) %>
       </div>
     <% } %>
+
     <div class="pactions">
       <a href="#" class="like_link <%= post.liked ? 'liked' : '' %>" data-type="post" data-id="<%= post.id %>"><%=
         (post.liked ? 'Мне не нравится' : 'Мне нравится') + (post.likes ? ' (' + post.likes + ')' : '') %></a>
-      <a href="#" class="reply_link" data-id="<%= post.id %>">Комментировать<%= post.comments.length ? ' (' + post.comments.length + ')' : '' %></a>
+      <a href="#" class="reply_link" data-id="<%= post.id %>">Комментировать<%=
+        post.comments.length ? ' (' + post.comments.length + ')' : '' %></a>
+      <%- act(csrf, '/post/' + post.id + '/repost', 'Рассказать друзьям' + (post.reposts ? ' (' + post.reposts + ')' : ''), { back: back, cls: 'small_act' }) %>
+      <% if (post.likes) { %><a href="/likes/post/<%= post.id %>?back=<%= encodeURIComponent(back) %>">кто оценил</a><% } %>
+      <% if (post.author_id === me.id) { %>
+        <a href="/post/<%= post.id %>/edit?back=<%= encodeURIComponent(back) %>">Редактировать</a>
+      <% } %>
       <% if (canDelete) { %>
-        <a href="/post/<%= post.id %>/delete" data-confirm="Удалить запись?">Удалить</a>
+        <%- act(csrf, '/post/' + post.id + '/pin', post.pinned ? 'Открепить' : 'Закрепить', { back: back, cls: 'small_act' }) %>
+        <%- act(csrf, '/post/' + post.id + '/delete', 'Удалить', { back: back, cls: 'small_act', confirm: 'Удалить запись?' }) %>
       <% } %>
     </div>
   </div>
@@ -43,14 +55,16 @@
   <% if (post.comments.length) { %>
     <div class="replies">
       <% post.comments.forEach(function (c) { %>
-        <div class="reply">
+        <div class="reply" id="comment<%= c.id %>">
           <div class="ava"><a href="/id<%= c.author_id %>"><img
             src="<%= avatar({ avatar: c.avatar }, 'thumb') %>" width="32" height="32" alt=""></a></div>
           <div class="body">
             <a class="author" href="/id<%= c.author_id %>"><%= c.first_name %> <%= c.last_name %></a>
             <span class="date"><%= u.vkDate(c.created_at) %></span>
+            <% if (c.edited_at) { %><span class="date">(изменено)</span><% } %>
+            <a href="#" class="reply_link small" data-id="<%= post.id %>" data-mention="<%= c.login %>">ответить</a>
             <% if (me && (c.author_id === me.id || canDelete)) { %>
-              <a class="small gray" href="/comment/<%= c.id %>/delete" data-confirm="Удалить комментарий?">удалить</a>
+              <%- act(csrf, '/comment/' + c.id + '/delete', 'удалить', { back: back, cls: 'small_act gray', confirm: 'Удалить комментарий?' }) %>
             <% } %>
             <div><%- u.text2html(c.text) %></div>
           </div>
@@ -62,10 +76,12 @@
 
   <% if (me) { %>
     <form class="reply_form" id="reply_form_<%= post.id %>" method="post"
-          action="/comment?type=post&amp;id=<%= post.id %>" style="display:none">
+          action="/comment?type=post&amp;id=<%= post.id %>" hidden>
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
       <input type="hidden" name="back" value="<%= back %>">
       <textarea class="text" name="text" maxlength="2000" placeholder="Ваш комментарий..."></textarea>
-      <div><button class="button" type="submit">Отправить</button></div>
+      <div><button class="button" type="submit">Отправить</button>
+        <span class="gray small">Ctrl+Enter — отправить</span></div>
     </form>
   <% } %>
 </div>

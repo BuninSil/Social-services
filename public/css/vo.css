@@ -360,3 +360,172 @@ a.like_link.liked { color: #a33; font-weight: bold; }
 #auth_box { float: left; width: 280px; }
 #auth_about { margin-left: 310px; color: #555; line-height: 16px; }
 #auth_about ul { margin: 6px 0 0 16px; }
+
+/* ============================================================== дополнения */
+/* Действия оформлены формами (нужен csrf-токен), но выглядят как ссылки. */
+
+form.act { display: inline; margin: 0; }
+.link_btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  color: #2b587a;
+  cursor: pointer;
+  font: inherit;
+  line-height: inherit;
+}
+.link_btn:hover { text-decoration: underline; }
+.link_btn.small_act { font-size: 10px; }
+.link_btn.gray { color: #777; }
+.profile_actions form.act { display: block; margin-bottom: 4px; }
+.people_row .acts form.act { display: block; margin-bottom: 3px; }
+#head_nav form.act { display: inline; }
+.link_btn.head_exit { color: #fff; }
+
+#live_notice {
+  position: fixed;
+  top: 44px;
+  right: 20px;
+  z-index: 50;
+  background: #fff8d6;
+  border: 1px solid #d9c87a;
+  padding: 6px 10px;
+  max-width: 280px;
+  line-height: 14px;
+}
+#live_notice a { display: block; padding-top: 3px; }
+
+/* ------------------------------------------------------------- вложения */
+
+.attachments { padding-top: 5px; }
+.att_photos .att_photo { float: left; margin: 0 5px 5px 0; display: block; }
+.att_photos img { border: 1px solid #ccc; padding: 1px; background: #fff; display: block; max-width: 170px; }
+.att_photos img.single { max-width: 400px; }
+
+.att_video { padding: 4px 0; }
+.att_video video { max-width: 420px; width: 100%; background: #000; border: 1px solid #ccc; display: block; }
+.att_cap { padding-top: 2px; }
+
+.att_audio { padding: 4px 0; }
+.att_audio_ttl b { color: #2b587a; }
+.att_audio audio, .att_voice audio { width: 320px; max-width: 100%; height: 28px; vertical-align: middle; }
+
+.att_voice { padding: 4px 0; }
+.att_voice .voice_ico {
+  display: inline-block;
+  width: 18px; height: 18px;
+  line-height: 18px;
+  text-align: center;
+  background: #6d8ab1;
+  color: #fff;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.att_doc {
+  padding: 3px 0 3px 16px;
+  background: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Crect x='1' y='0' width='9' height='12' fill='%23b3bcc5'/%3E%3Crect x='3' y='3' width='5' height='1' fill='%23fff'/%3E%3Crect x='3' y='6' width='5' height='1' fill='%23fff'/%3E%3C/svg%3E") no-repeat 0 4px;
+}
+.att_doc .gray { margin-left: 6px; font-size: 10px; }
+
+/* ------------------------------------------------------- репост и закреп */
+
+.repost {
+  border-left: 2px solid #dde3ea;
+  padding: 4px 0 4px 8px;
+  margin: 6px 0 4px;
+}
+.repost .rhead img { border: 1px solid #ccc; padding: 1px; background: #fff; vertical-align: middle; margin-right: 4px; }
+.repost .rhead .author { font-weight: bold; }
+.repost .rhead .date { color: #999; font-size: 10px; margin-left: 5px; }
+
+.post.pinned { background: #fbfcf7; }
+.pin_mark { color: #999; font-size: 10px; margin-left: 6px; }
+
+/* ------------------------------------------------------------ уведомления */
+
+.notif { border-bottom: 1px solid #eee; padding: 7px 8px; }
+.notif:last-child { border-bottom: 0; }
+.notif.fresh { background: #f3f7fc; }
+.notif .ava { float: left; }
+.notif .ava img { border: 1px solid #ccc; padding: 1px; background: #fff; }
+.notif .body { margin-left: 52px; }
+.notif .author { font-weight: bold; }
+.notif .date { color: #999; font-size: 10px; margin-left: 5px; }
+.notif .preview { padding-top: 2px; }
+
+/* ------------------------------------------------------------------ видео */
+
+.video_item { float: left; width: 158px; margin: 0 10px 12px 0; }
+.video_item a { position: relative; display: block; }
+.video_item img { border: 1px solid #ccc; padding: 2px; background: #fff; display: block; }
+.video_item .vdur {
+  position: absolute;
+  right: 4px; bottom: 4px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-size: 10px;
+  padding: 0 3px;
+}
+.video_item .t { padding-top: 3px; font-weight: bold; }
+.video_item .c { font-size: 10px; }
+
+/* -------------------------------------------------------------- документы */
+
+.doc_row { border-bottom: 1px solid #eee; padding: 6px 8px; }
+.doc_row:last-child { border-bottom: 0; }
+.doc_row .acts { float: right; }
+
+/* ---------------------------------------------------------------- беседы */
+
+.dlg_cnt {
+  background: #d14836;
+  color: #fff;
+  padding: 0 4px;
+  font-size: 10px;
+  margin-left: 4px;
+}
+.member_pick {
+  display: inline-block;
+  width: 240px;
+  padding: 3px 0;
+  vertical-align: middle;
+}
+.member_pick img { vertical-align: middle; margin: 0 4px; border: 1px solid #ccc; }
+.msg .msg_acts { float: right; visibility: hidden; }
+.msg:hover .msg_acts { visibility: visible; }
+.msg .mtext { word-wrap: break-word; }
+.inline_form { padding: 3px 0; }
+.attach_label { margin-left: 10px; }
+.attach_box { float: right; }
+#typing_line { padding: 4px 8px; font-style: italic; }
+
+/* Блоки с внутренними плавающими элементами держат их внутри себя.
+   Именно overflow, а не clear: clear увёл бы содержимое вниз под колонку. */
+.page_title,
+.block_head,
+.block_foot,
+.wf_foot,
+.sf_foot,
+.pactions,
+.photo_nav,
+.notif,
+.doc_row,
+.audio_row,
+.people_row,
+.dlg_row,
+.group_row,
+.post,
+.reply,
+.msg { overflow: hidden; }
+
+/* Правая колонка — отдельный контекст, чтобы левая на неё не заезжала. */
+#content, #profile_right { overflow: hidden; }
+#chat_settings { background: #fafafa; border-bottom: 1px solid #eee; }
+
+/* --------------------------------------------------------- прочие мелочи */
+
+.pactions form.act { margin-right: 10px; }
+.pactions .link_btn { font-size: 10px; }
+.reply .link_btn { font-size: 10px; }

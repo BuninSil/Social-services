@@ -1,0 +1,55 @@
+<% if (items && items.length) { %>
+  <div class="attachments">
+    <% const photos = items.filter(function (i) { return i.kind === 'photo'; }); %>
+    <% if (photos.length) { %>
+      <div class="att_photos">
+        <% photos.forEach(function (item) { %>
+          <a class="att_photo" href="/photo<%= item.photo.owner_id %>_<%= item.photo.id %>">
+            <img src="/uploads/<%= item.photo.thumb %>"
+                 alt="<%= item.photo.description || 'фотография' %>"
+                 <%= photos.length === 1 ? 'class="single"' : '' %>>
+          </a>
+        <% }); %>
+        <div class="clear"></div>
+      </div>
+    <% } %>
+
+    <% items.filter(function (i) { return i.kind === 'video'; }).forEach(function (item) { %>
+      <div class="att_video">
+        <video controls preload="metadata"
+               <% if (item.video.poster) { %>poster="/uploads/<%= item.video.poster %>"<% } %>
+               src="/uploads/<%= item.video.file %>"></video>
+        <div class="att_cap">
+          <a href="/video<%= item.video.owner_id %>_<%= item.video.id %>"><%= item.video.title || 'Видеозапись' %></a>
+          <% if (item.video.duration) { %><span class="gray"> · <%= duration(item.video.duration) %></span><% } %>
+          <span class="gray"> · <%= fileSize(item.video.size) %></span>
+        </div>
+      </div>
+    <% }); %>
+
+    <% items.filter(function (i) { return i.kind === 'audio'; }).forEach(function (item) { %>
+      <div class="att_audio">
+        <div class="att_audio_ttl">
+          <b><%= item.audio.artist %></b> &ndash; <%= item.audio.title %>
+          <% if (item.audio.duration) { %><span class="gray"> · <%= duration(item.audio.duration) %></span><% } %>
+        </div>
+        <audio controls preload="none" src="/uploads/<%= item.audio.file %>"></audio>
+      </div>
+    <% }); %>
+
+    <% items.filter(function (i) { return i.kind === 'voice'; }).forEach(function (item) { %>
+      <div class="att_voice">
+        <span class="voice_ico">♪</span>
+        <span class="gray">Голосовое сообщение<% if (item.meta.duration) { %>, <%= duration(item.meta.duration) %><% } %></span>
+        <audio controls preload="none" src="/uploads/<%= item.file %>"></audio>
+      </div>
+    <% }); %>
+
+    <% items.filter(function (i) { return i.kind === 'doc'; }).forEach(function (item) { %>
+      <div class="att_doc">
+        <a href="/doc<%= item.doc.owner_id %>_<%= item.doc.id %>"><%= item.doc.name %></a>
+        <span class="gray"><%= item.doc.ext.toUpperCase() %>, <%= fileSize(item.doc.size) %></span>
+      </div>
+    <% }); %>
+  </div>
+<% } %>

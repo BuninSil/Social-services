@@ -10,9 +10,11 @@ const session = require('express-session');
 const db = require('./db');
 const u = require('./lib/util');
 const view = require('./lib/view');
+const media = require('./lib/media');
+const M = require('./lib/models');
 const { loadUser } = require('./lib/auth');
 const SqliteStore = require('./lib/session-store');
-const { UPLOAD_DIR } = require('./lib/upload');
+const security = require('./lib/security');
 const ws = require('./ws');
 
 const PORT = parseInt(process.env.PORT, 10) || 8080;
@@ -33,19 +35,45 @@ const app = express();
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '..', 'views'));
 app.set('trust proxy', 1);
+app.set('query parser', 'simple');
 app.disable('x-powered-by');
 
 // Хелперы, доступные во всех шаблонах.
 app.locals.u = u;
 app.locals.avatar = view.avatar;
 app.locals.gavatar = view.gavatar;
+app.locals.convAvatar = view.convAvatar;
+app.locals.act = view.act;
+app.locals.duration = view.duration;
+app.locals.fileSize = view.size;
+app.locals.online = (userId) => ws.isOnline(userId);
 
-app.use('/css', express.static(path.join(__dirname, '..', 'public', 'css'), { maxAge: '1h' }));
-app.use('/js', express.static(path.join(__dirname, '..', 'public', 'js'), { maxAge: '1h' }));
-app.use('/img', express.static(path.join(__dirname, '..', 'public', 'img'), { maxAge: '7d' }));
-app.use('/uploads', express.static(UPLOAD_DIR, { maxAge: '7d', index: false, dotfiles: 'deny' }));
+app.use(security.securityHeaders);
 
-app.use(express.urlencoded({ extended: false, limit: '1mb' }));
+const staticOptions = { maxAge: '1h', redirect: false };
+app.use('/css', express.static(path.join(__dirname, '..', 'public', 'css'), staticOptions));
+app.use('/js', express.static(path.join(__dirname, '..', 'public', 'js'), staticOptions));
+app.use('/img', express.static(path.join(__dirname, '..', 'public', 'img'), { maxAge: '7d', redirect: false }));
+
+/**
+ * Загруженные файлы отдаём только как данные: без разбора типа браузером
+ * и без выполнения — иначе картинка с html внутри становится чужим скриптом.
+ */
+app.use('/uploads', (req, res, next) => {
+  if (req.path.startsWith('/docs/')) return res.status(404).end();
+  res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+  next();
+}, express.static(media.UPLOAD_DIR, {
+  maxAge: '7d',
+  index: false,
+  dotfiles: 'deny',
+  redirect: false,
+  setHeaders(res) {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+  },
+}));
+
+app.use(express.urlencoded({ extended: false, limit: '256kb', parameterLimit: 200 }));
 
 const sessionParser = session({
   name: 'vo_sid',
@@ -54,10 +82,17 @@ const sessionParser = session({
   resave: false,
   saveUninitialized: false,
   rolling: true,
-  cookie: { httpOnly: true, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 },
+  proxy: true,
+  cookie: {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: 'auto',
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+  },
 });
 app.use(sessionParser);
 app.use(loadUser);
+app.use(security.csrfProtect);
 
 app.use(require('./routes/auth'));
 app.use(require('./routes/profile'));
@@ -66,28 +101,45 @@ app.use(require('./routes/friends'));
 app.use(require('./routes/wall'));
 app.use(require('./routes/im'));
 app.use(require('./routes/photos'));
+app.use(require('./routes/video'));
 app.use(require('./routes/audio'));
+app.use(require('./routes/docs'));
 app.use(require('./routes/groups'));
+app.use(require('./routes/notifications'));
 app.use(require('./routes/misc'));
 
 app.use((req, res) => {
   res.status(404).render('error', { code: 404, message: 'Такой страницы здесь нет.' });
 });
 
-app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
-  if (err && err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(413).render('error', { code: 413, message: 'Файл слишком большой.' });
+app.use((err, req, res, next) => {
+  if (err && (err.code === 'LIMIT_FILE_SIZE' || err.code === 'LIMIT_FILE_COUNT')) {
+    return res.status(413).render('error', {
+      code: 413, message: 'Файл слишком большой или файлов слишком много.',
+    });
   }
-  console.error(err);
+  if (err && err.type === 'entity.too.large') {
+    return res.status(413).render('error', { code: 413, message: 'Слишком много данных в запросе.' });
+  }
+  console.error('[ошибка]', err && err.message ? err.message : err);
   res.status(500).render('error', { code: 500, message: 'Что-то сломалось. Попробуйте ещё раз.' });
 });
 
 const server = http.createServer(app);
 ws.attach(server, sessionParser);
 
+/** Статус «в сети» показываем друзьям сразу, без перезагрузки страницы. */
+ws.onPresence((userId, online) => {
+  db.prepare('UPDATE users SET last_seen = ? WHERE id = ?').run(u.now(), userId);
+  ws.sendMany(M.friendIds(userId), { kind: 'presence', user_id: userId, online });
+});
+
 server.listen(PORT, HOST, () => {
   const users = db.prepare('SELECT COUNT(*) n FROM users').get().n;
   console.log('ВОнлайне слушает http://' + HOST + ':' + PORT + ' (пользователей: ' + users + ')');
+  if (!media.ffmpegAvailable()) {
+    console.log('ffmpeg не найден: видео примут, но без обложки и длительности.');
+  }
 });
 
 function shutdown() {

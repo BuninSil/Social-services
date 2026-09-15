@@ -1,5 +1,10 @@
 FROM node:22-bookworm-slim
 
+# Обложки и длительность видео делает ffmpeg. Без него всё работает,
+# просто без превью — раскомментируйте, если превью нужны (образ потяжелеет).
+# RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+#     && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY package.json package-lock.json* ./

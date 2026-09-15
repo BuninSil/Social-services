@@ -1,9 +1,16 @@
 <form class="wall_form block" method="post" action="<%= action %>" enctype="multipart/form-data">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
   <div class="block_body">
-    <textarea class="text" name="text" maxlength="4000" placeholder="Что у Вас нового?"></textarea>
+    <textarea class="text" name="text" maxlength="8000" placeholder="Что у Вас нового?"></textarea>
     <div class="wf_foot">
       <button class="button button_blue" type="submit">Отправить</button>
-      <span class="right">Прикрепить фотографию: <input type="file" name="photo" accept="image/*"></span>
+      <span class="attach_box">
+        <label class="attach_label">Прикрепить:
+          <input type="file" name="files" multiple
+                 accept="image/*,video/*,audio/*,.pdf,.zip,.rar,.7z,.txt,.md,.csv,.log">
+        </label>
+        <span class="gray small">фото, видео, музыка, документы — до 10 файлов</span>
+      </span>
     </div>
   </div>
 </form>

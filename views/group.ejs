@@ -4,13 +4,15 @@
   <img class="pavatar" src="<%= gavatar(group) %>" width="200" alt="">
   <div class="profile_actions">
     <% if (isMember) { %>
-      <% if (!isAdmin) { %><a href="/club<%= group.id %>/leave">Выйти из группы</a><% } %>
+      <% if (!isAdmin) { %>
+        <%- act(csrf, '/club' + group.id + '/leave', 'Выйти из группы') %>
+      <% } %>
       <% if (isAdmin) { %>
         <a href="/club<%= group.id %>/edit">Редактировать группу</a>
-        <a href="/club<%= group.id %>/delete" data-confirm="Удалить группу?">Удалить группу</a>
+        <%- act(csrf, '/club' + group.id + '/delete', 'Удалить группу', { confirm: 'Удалить группу со всеми записями?' }) %>
       <% } %>
     <% } else { %>
-      <a href="/club<%= group.id %>/join">Вступить в группу</a>
+      <%- act(csrf, '/club' + group.id + '/join', 'Вступить в группу') %>
     <% } %>
   </div>
 
@@ -31,6 +33,7 @@
 <div id="profile_right">
   <div class="pname"><%= group.name %></div>
   <div class="pstatus"><%= group.kind === 'public' ? 'Публичная страница' : 'Группа' %></div>
+  <% if (uploadError) { %><div class="error"><%= uploadError %></div><% } %>
 
   <div class="block">
     <div class="block_head">Информация</div>

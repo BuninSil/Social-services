@@ -1,0 +1,25 @@
+<%- include('partials/head', { title: 'Чёрный список', nav: 'settings' }) %>
+
+<h1 class="page_title">Чёрный список
+  <span class="right"><a href="/settings">К настройкам</a></span></h1>
+
+<div class="block">
+  <div class="block_body tight">
+    <% if (!blocked.length) { %>
+      <div class="empty" style="padding:10px">Список пуст. Заблокированные не смогут писать Вам и видеть страницу.</div>
+    <% } %>
+    <% blocked.forEach(function (p) { %>
+      <div class="people_row">
+        <div class="acts"><%- act(csrf, '/unblock/' + p.id, 'Разблокировать', { back: '/settings/blacklist' }) %></div>
+        <div class="ava"><a href="/id<%= p.id %>"><img src="<%= avatar(p, 'thumb') %>" width="50" height="50" alt=""></a></div>
+        <div class="body">
+          <div class="name"><a href="/id<%= p.id %>"><%= u.fullName(p) %></a></div>
+          <div class="info gray">в списке с <%= u.vkDate(p.blocked_at) %></div>
+        </div>
+        <div class="clear"></div>
+      </div>
+    <% }); %>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

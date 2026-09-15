@@ -17,7 +17,8 @@
     <a href="#" class="like_link <%= liked ? 'liked' : '' %>" data-type="photo" data-id="<%= photo.id %>"><%=
       (liked ? 'Мне не нравится' : 'Мне нравится') + (likes ? ' (' + likes + ')' : '') %></a>
     <% if (me.id === owner.id) { %>
-      <a href="/photo<%= owner.id %>_<%= photo.id %>/delete" data-confirm="Удалить фотографию?">Удалить</a>
+      <%- act(csrf, '/photo/' + photo.id + '/avatar', 'Сделать фотографией страницы', { back: '/photo' + owner.id + '_' + photo.id }) %>
+      <%- act(csrf, '/photo/' + photo.id + '/delete', 'Удалить', { confirm: 'Удалить фотографию?' }) %>
     <% } %>
     <div class="clear"></div>
   </div>
@@ -38,7 +39,7 @@
           <a class="author" href="/id<%= c.author_id %>"><%= c.first_name %> <%= c.last_name %></a>
           <span class="date"><%= u.vkDate(c.created_at) %></span>
           <% if (c.author_id === me.id || owner.id === me.id) { %>
-            <a class="small gray" href="/comment/<%= c.id %>/delete" data-confirm="Удалить комментарий?">удалить</a>
+            <%- act(csrf, '/comment/' + c.id + '/delete', 'удалить', { back: '/photo' + owner.id + '_' + photo.id, cls: 'small_act gray', confirm: 'Удалить комментарий?' }) %>
           <% } %>
           <div><%- u.text2html(c.text) %></div>
         </div>
@@ -46,6 +47,7 @@
       </div>
     <% }); %>
     <form method="post" action="/comment?type=photo&amp;id=<%= photo.id %>" style="padding-top:8px">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
       <input type="hidden" name="back" value="/photo<%= owner.id %>_<%= photo.id %>">
       <textarea class="text wide" name="text" style="height:40px" placeholder="Ваш комментарий..."></textarea>
       <div style="padding-top:5px"><button class="button" type="submit">Отправить</button></div>

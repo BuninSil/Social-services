@@ -2,6 +2,8 @@
 
 const crypto = require('crypto');
 const db = require('../db');
+const models = require('./models');
+const { csrfToken } = require('./security');
 
 const SCRYPT_PARAMS = { N: 16384, r: 8, p: 1, keylen: 64 };
 
@@ -23,10 +25,12 @@ function verifyPassword(password, stored) {
 const selectUser = db.prepare('SELECT * FROM users WHERE id = ?');
 const touchUser = db.prepare('UPDATE users SET last_seen = ? WHERE id = ?');
 
-/** Подмешивает текущего пользователя и счётчики в каждый запрос. */
+/** Подмешивает текущего пользователя, счётчики и csrf-токен в каждый запрос. */
 function loadUser(req, res, next) {
   res.locals.me = null;
-  res.locals.counters = { messages: 0, requests: 0 };
+  res.locals.counters = { messages: 0, requests: 0, notifications: 0 };
+  // Токен нужен и до входа: у форм входа и регистрации он тоже должен быть.
+  res.locals.csrf = csrfToken(req);
   if (req.session && req.session.userId) {
     const user = selectUser.get(req.session.userId);
     if (user) {
@@ -34,10 +38,10 @@ function loadUser(req, res, next) {
       req.user = user;
       res.locals.me = user;
       res.locals.counters = {
-        messages: db.prepare('SELECT COUNT(DISTINCT from_id) n FROM messages WHERE to_id = ? AND is_read = 0')
-          .get(user.id).n,
+        messages: models.unreadDialogs(user.id),
         requests: db.prepare("SELECT COUNT(*) n FROM friendships WHERE to_id = ? AND status = 'pending'")
           .get(user.id).n,
+        notifications: models.notifQ.unread.get(user.id).n,
       };
     } else {
       req.session.destroy(() => {});

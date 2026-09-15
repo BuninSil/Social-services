@@ -1,0 +1,18 @@
+<%- include('partials/head', { title: 'Запись', nav: '' }) %>
+
+<h1 class="page_title">Запись
+  <span class="right"><a href="<%= post.owner_type === 'group' ? '/club' + post.owner_id : '/id' + post.owner_id %>">
+    К стене</a></span></h1>
+
+<div class="block">
+  <div class="block_body tight">
+    <%- include('partials/post', {
+      post: post,
+      canDelete: canDelete,
+      showOwner: true,
+      back: '/post/' + post.id
+    }) %>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

@@ -1,0 +1,23 @@
+<%- include('partials/head', { title: 'Редактирование записи', nav: '' }) %>
+
+<h1 class="page_title">Редактирование записи</h1>
+
+<div class="block">
+  <div class="block_body">
+    <form method="post" action="/post/<%= post.id %>/edit">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <input type="hidden" name="back" value="<%= back %>">
+      <textarea class="text wide" name="text" style="height:90px" maxlength="8000"><%= post.text %></textarea>
+      <% if (post.attachments.length) { %>
+        <div class="gray small" style="padding-top:6px">Вложения остаются без изменений:</div>
+        <%- include('partials/attachments', { items: post.attachments }) %>
+      <% } %>
+      <div style="padding-top:8px">
+        <button class="button button_blue" type="submit">Сохранить</button>
+        <a class="button" href="<%= back %>">Отмена</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

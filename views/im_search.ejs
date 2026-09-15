@@ -1,0 +1,33 @@
+<%- include('partials/head', { title: 'Поиск по сообщениям', nav: 'im' }) %>
+
+<h1 class="page_title">Поиск по переписке
+  <span class="right"><a href="/im">Все диалоги</a></span></h1>
+
+<div class="block">
+  <div class="block_body">
+    <form method="get" action="/im/search">
+      <input class="text" type="text" name="q" value="<%= q %>" size="40" placeholder="что искали">
+      <button class="button" type="submit">Найти</button>
+    </form>
+  </div>
+</div>
+
+<div class="block">
+  <div class="block_head">Найдено <span class="right"><%= results.length %></span></div>
+  <div class="block_body tight">
+    <% if (!results.length) { %><div class="empty" style="padding:10px">Ничего не нашлось.</div><% } %>
+    <% results.forEach(function (r) { %>
+      <div class="dlg_row">
+        <div class="date"><%= u.shortDate(r.message.created_at) %></div>
+        <div class="ava"><img src="<%= avatar(r.message.author, 'thumb') %>" width="40" height="40" alt=""></div>
+        <div class="body">
+          <div class="name"><a href="/im/c<%= r.conv.id %>"><%= r.conv.title %></a></div>
+          <div class="preview"><%= u.fullName(r.message.author) %>: <%= u.trim(r.message.text, 160) %></div>
+        </div>
+        <div class="clear"></div>
+      </div>
+    <% }); %>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

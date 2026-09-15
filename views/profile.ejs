@@ -6,22 +6,28 @@
     <% if (status === 'self') { %>
       <a href="/settings">Редактировать страницу</a>
       <a href="/photos/upload">Загрузить фотографию</a>
+      <a href="/video">Загрузить видео</a>
     <% } else { %>
-      <a href="/im/<%= user.id %>">Отправить сообщение</a>
+      <% if (canWrite) { %><a href="/im/<%= user.id %>">Отправить сообщение</a><% } %>
       <% if (status === 'friends') { %>
-        <a href="/friends/remove/<%= user.id %>" data-confirm="Удалить из друзей?">Удалить из друзей</a>
+        <%- act(csrf, '/friends/remove/' + user.id, 'Удалить из друзей', { back: '/id' + user.id, confirm: 'Удалить из друзей?' }) %>
       <% } else if (status === 'out') { %>
         <span class="gray">Заявка отправлена</span>
-        <a href="/friends/remove/<%= user.id %>">Отменить заявку</a>
+        <%- act(csrf, '/friends/remove/' + user.id, 'Отменить заявку', { back: '/id' + user.id }) %>
       <% } else if (status === 'in') { %>
-        <a href="/friends/add/<%= user.id %>">Принять в друзья</a>
+        <%- act(csrf, '/friends/add/' + user.id, 'Принять в друзья', { back: '/id' + user.id }) %>
       <% } else { %>
-        <a href="/friends/add/<%= user.id %>">Добавить в друзья</a>
+        <%- act(csrf, '/friends/add/' + user.id, 'Добавить в друзья', { back: '/id' + user.id }) %>
+      <% } %>
+      <% if (iBlockedThem) { %>
+        <%- act(csrf, '/unblock/' + user.id, 'Убрать из чёрного списка', { back: '/id' + user.id }) %>
+      <% } else { %>
+        <%- act(csrf, '/block/' + user.id, 'Заблокировать', { back: '/id' + user.id, cls: 'gray', confirm: 'Заблокировать этого пользователя?' }) %>
       <% } %>
     <% } %>
   </div>
 
-  <% if (friends.length) { %>
+  <% if (showFriends && friends.length) { %>
     <div class="block" style="margin-top:10px">
       <div class="block_head">Друзья
         <span class="right"><a href="/friends/<%= user.id %>"><%= friendsCount %></a></span></div>
@@ -30,6 +36,7 @@
           <div class="friend_mini">
             <a href="/id<%= f.id %>"><img src="<%= avatar(f, 'thumb') %>" width="60" height="60" alt=""></a>
             <a class="nm small" href="/id<%= f.id %>"><%= f.first_name %></a>
+            <% if (online(f.id)) { %><span class="online_dot" title="на сайте">●</span><% } %>
           </div>
         <% }); %>
         <div class="clear"></div>
@@ -52,7 +59,7 @@
     </div>
   <% } %>
 
-  <% if (photos.length) { %>
+  <% if (showPhotos && photos.length) { %>
     <div class="block">
       <div class="block_head">Фотографии
         <span class="right"><a href="/photos/<%= user.id %>"><%= photosCount %></a></span></div>
@@ -68,24 +75,30 @@
 </div>
 
 <div id="profile_right">
-  <div class="pname"><%= u.fullName(user) %></div>
+  <div class="pname"><%= u.fullName(user) %>
+    <% if (online(user.id)) { %><span class="online_dot" title="на сайте">●</span><% } %>
+  </div>
   <div class="pstatus">
     <% if (user.status) { %><%= user.status %><% } else if (status === 'self') { %>
       <span class="gray">Здесь может быть Ваш статус.</span><% } %>
     <% if (status === 'self') { %> <a class="edit_status" href="/settings">изменить</a><% } %>
   </div>
 
+  <% if (uploadError) { %><div class="error"><%= uploadError %></div><% } %>
+
   <div class="block">
     <div class="block_head">Основная информация</div>
     <div class="block_body">
       <table class="pinfo">
-        <tr><td class="label">Был на сайте:</td><td><%= u.lastSeen(user) || '&mdash;' %></td></tr>
+        <tr><td class="label">Был на сайте:</td>
+          <td><%= online(user.id) ? 'сейчас на сайте' : (u.lastSeen(user) || '—') %></td></tr>
         <% if (user.bday) { %><tr><td class="label">День рождения:</td><td><%= u.formatBday(user.bday) %></td></tr><% } %>
         <% if (user.city) { %><tr><td class="label">Город:</td><td><%= user.city %></td></tr><% } %>
         <% if (user.hometown) { %><tr><td class="label">Родной город:</td><td><%= user.hometown %></td></tr><% } %>
         <% if (user.relationship) { %><tr><td class="label">Семейное положение:</td><td><%= user.relationship %></td></tr><% } %>
         <% if (user.politics) { %><tr><td class="label">Полит. взгляды:</td><td><%= user.politics %></td></tr><% } %>
         <% if (user.worldview) { %><tr><td class="label">Мировоззрение:</td><td><%= user.worldview %></td></tr><% } %>
+        <tr><td class="label">Короткий адрес:</td><td class="gray">/<%= user.login %></td></tr>
 
         <% if (user.activity || user.interests || user.music || user.films || user.tv || user.books || user.games || user.quotes || user.about) { %>
           <tr class="section"><td colspan="2">Личная информация</td></tr>
@@ -103,8 +116,12 @@
       <div class="counters">
         <a href="/friends/<%= user.id %>"><b><%= friendsCount %></b> <%= u.plural(friendsCount, 'друг', 'друга', 'друзей') %></a>
         <a href="/photos/<%= user.id %>"><b><%= photosCount %></b> <%= u.plural(photosCount, 'фотография', 'фотографии', 'фотографий') %></a>
+        <a href="/video/<%= user.id %>"><b><%= videosCount %></b> <%= u.plural(videosCount, 'видеозапись', 'видеозаписи', 'видеозаписей') %></a>
         <a href="/audio/<%= user.id %>"><b><%= audioCount %></b> <%= u.plural(audioCount, 'аудиозапись', 'аудиозаписи', 'аудиозаписей') %></a>
         <a href="/groups/<%= user.id %>"><b><%= groupsCount %></b> <%= u.plural(groupsCount, 'группа', 'группы', 'групп') %></a>
+        <% if (status === 'self') { %>
+          <a href="/docs"><b><%= docsCount %></b> <%= u.plural(docsCount, 'документ', 'документа', 'документов') %></a>
+        <% } %>
       </div>
     </div>
   </div>

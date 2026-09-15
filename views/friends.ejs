@@ -1,7 +1,8 @@
 <%- include('partials/head', { title: 'Друзья', nav: owner.id === me.id ? 'friends' : '' }) %>
 
 <h1 class="page_title">
-  <% if (owner.id === me.id) { %>Мои друзья<% } else { %>Друзья &mdash; <a href="/id<%= owner.id %>"><%= u.fullName(owner) %></a><% } %>
+  <% if (owner.id === me.id) { %>Мои друзья<% } else { %>Друзья &mdash;
+    <a href="/id<%= owner.id %>"><%= u.fullName(owner) %></a><% } %>
   <span class="right"><%= u.pluralCount(friends.length, 'друг', 'друга', 'друзей') %></span>
 </h1>
 
@@ -16,6 +17,7 @@
 <div class="block">
   <div class="block_body tight">
     <% var list = tab === 'requests' ? incoming : (tab === 'out' ? outgoing : friends); %>
+    <% var backUrl = tab === 'requests' ? '/friends/requests' : (tab === 'out' ? '/friends/out' : '/friends'); %>
     <% if (!list.length) { %>
       <div class="empty" style="padding:10px">
         <% if (tab === 'requests') { %>Новых заявок нет.
@@ -27,22 +29,24 @@
       <div class="people_row">
         <div class="acts">
           <% if (tab === 'requests') { %>
-            <a href="/friends/add/<%= f.id %>">Принять</a>
-            <a href="/friends/remove/<%= f.id %>">Отклонить</a>
+            <%- act(csrf, '/friends/add/' + f.id, 'Принять', { back: backUrl }) %>
+            <%- act(csrf, '/friends/remove/' + f.id, 'Отклонить', { back: backUrl }) %>
           <% } else if (tab === 'out') { %>
-            <a href="/friends/remove/<%= f.id %>">Отменить</a>
+            <%- act(csrf, '/friends/remove/' + f.id, 'Отменить', { back: backUrl }) %>
           <% } else { %>
             <a href="/im/<%= f.id %>">Написать</a>
             <% if (owner.id === me.id) { %>
-              <a href="/friends/remove/<%= f.id %>" data-confirm="Удалить из друзей?">Удалить</a>
+              <%- act(csrf, '/friends/remove/' + f.id, 'Удалить', { back: backUrl, confirm: 'Удалить из друзей?' }) %>
             <% } %>
           <% } %>
         </div>
         <div class="ava"><a href="/id<%= f.id %>"><img src="<%= avatar(f, 'thumb') %>" width="60" height="60" alt=""></a></div>
         <div class="body">
-          <div class="name"><a href="/id<%= f.id %>"><%= u.fullName(f) %></a></div>
+          <div class="name"><a href="/id<%= f.id %>"><%= u.fullName(f) %></a>
+            <% if (online(f.id)) { %><span class="online_dot" title="на сайте">●</span><% } %>
+          </div>
           <div class="info">
-            <%= u.lastSeen(f) %><% if (f.city) { %>, <%= f.city %><% } %>
+            <%= online(f.id) ? 'сейчас на сайте' : u.lastSeen(f) %><% if (f.city) { %>, <%= f.city %><% } %>
           </div>
           <% if (f.status) { %><div class="gray"><%= f.status %></div><% } %>
         </div>

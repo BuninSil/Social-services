@@ -1,6 +1,7 @@
 <%- include('partials/head', { title: 'Мои Новости', nav: 'feed' }) %>
 
 <h1 class="page_title">Мои Новости</h1>
+<% if (uploadError) { %><div class="error"><%= uploadError %></div><% } %>
 
 <%- include('partials/wallform', { action: '/id' + me.id + '/wall' }) %>
 

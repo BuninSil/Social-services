@@ -6,6 +6,7 @@
 <div class="block">
   <div class="block_body">
     <form method="post" action="/photos/upload" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
       <table class="form_table">
         <tr><td class="label">Альбом</td><td>
           <select class="text" name="album_id">

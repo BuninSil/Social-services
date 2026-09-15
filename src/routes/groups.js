@@ -3,20 +3,22 @@
 const express = require('express');
 const db = require('../db');
 const M = require('../lib/models');
+const media = require('../lib/media');
+const publish = require('../lib/publish');
 const { requireAuth } = require('../lib/auth');
 const { now, trim } = require('../lib/util');
-const { imageUpload, saveImage, removeFile } = require('../lib/upload');
-const { wallAlbum } = require('./profile');
+const { uploadThen, rateLimit, backTo } = require('../lib/security');
 
 const router = express.Router();
 const PER_PAGE = 20;
+const postLimit = rateLimit('post', 60000, 20, 'Слишком много записей подряд. Подождите минуту.');
 
-function withMembers(groups) {
-  return groups.map((g) => Object.assign({}, g, { members: M.groupsQ.membersCount.get(g.id).n }));
-}
+const withMembers = (groups) =>
+  groups.map((g) => Object.assign({}, g, { members: M.groupsQ.membersCount.get(g.id).n }));
 
 function isAdmin(groupId, userId) {
-  const row = db.prepare('SELECT role FROM group_members WHERE group_id = ? AND user_id = ?').get(groupId, userId);
+  const row = db.prepare('SELECT role FROM group_members WHERE group_id = ? AND user_id = ?')
+    .get(groupId, userId);
   return !!row && row.role === 'admin';
 }
 
@@ -33,36 +35,45 @@ router.get('/groups/all', requireAuth, (req, res) => {
 
 router.get('/groups/new', requireAuth, (req, res) => res.render('group_form', { group: null, error: null }));
 
-router.post('/groups/new', requireAuth, imageUpload.single('avatar'), async (req, res) => {
+router.post('/groups/new', requireAuth, uploadThen(media.uploadImage.single('avatar')), async (req, res) => {
   const name = trim(req.body.name, 80);
   if (!name) return res.render('group_form', { group: null, error: 'Укажите название группы.' });
 
   let avatarFile = null;
   if (req.file) {
-    const saved = await saveImage(req.file.buffer, 'avatars', { width: 400, thumb: 200, square: true });
-    avatarFile = saved.file;
+    const type = media.detect(req.file.buffer, req.file.mimetype);
+    if (!type || type.kind !== 'image') {
+      return res.render('group_form', { group: null, error: 'Аватар должен быть изображением.' });
+    }
+    avatarFile = (await media.saveImage(req.file.buffer, 'avatars', { width: 400, thumb: 200, square: true })).file;
   }
-  const info = db.prepare(`
+
+  const id = db.prepare(`
     INSERT INTO groups (name, description, kind, avatar, creator_id, created_at) VALUES (?, ?, ?, ?, ?, ?)
   `).run(name, trim(req.body.description, 2000), req.body.kind === 'public' ? 'public' : 'group',
-    avatarFile, req.user.id, now());
+    avatarFile, req.user.id, now()).lastInsertRowid;
 
   db.prepare("INSERT INTO group_members (group_id, user_id, role, joined_at) VALUES (?, ?, 'admin', ?)")
-    .run(info.lastInsertRowid, req.user.id, now());
-  res.redirect('/club' + info.lastInsertRowid);
+    .run(id, req.user.id, now());
+  res.redirect('/club' + id);
 });
 
 router.get(/^\/groups\/(\d+)$/, requireAuth, (req, res, next) => {
   const owner = M.getUser(Number(req.params[0]));
   if (!owner) return next();
+  if (!M.canSee(req.user.id, owner, 'profile')) {
+    return res.status(403).render('error', { code: 403, message: 'Страница доступна только друзьям.' });
+  }
   res.render('groups', { mode: 'user', owner, groups: withMembers(M.groupsQ.ofUser.all(owner.id)) });
 });
 
 router.get(/^\/club(\d+)$/, requireAuth, (req, res, next) => {
   const group = M.groupsQ.byId.get(Number(req.params[0]));
   if (!group) return next();
+
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
   const total = M.wallCount('group', group.id);
+
   res.render('group', {
     group,
     creator: M.getUser(group.creator_id) || { id: 0, first_name: 'Удалённая', last_name: 'страница' },
@@ -73,10 +84,11 @@ router.get(/^\/club(\d+)$/, requireAuth, (req, res, next) => {
     wallCount: total,
     page,
     pages: Math.max(1, Math.ceil(total / PER_PAGE)),
+    uploadError: req.query.err ? String(req.query.err).slice(0, 300) : null,
   });
 });
 
-router.get(/^\/club(\d+)\/join$/, requireAuth, (req, res, next) => {
+router.post(/^\/club(\d+)\/join$/, requireAuth, (req, res, next) => {
   const group = M.groupsQ.byId.get(Number(req.params[0]));
   if (!group) return next();
   db.prepare("INSERT OR IGNORE INTO group_members (group_id, user_id, role, joined_at) VALUES (?, ?, 'member', ?)")
@@ -84,7 +96,7 @@ router.get(/^\/club(\d+)\/join$/, requireAuth, (req, res, next) => {
   res.redirect('/club' + group.id);
 });
 
-router.get(/^\/club(\d+)\/leave$/, requireAuth, (req, res, next) => {
+router.post(/^\/club(\d+)\/leave$/, requireAuth, (req, res, next) => {
   const group = M.groupsQ.byId.get(Number(req.params[0]));
   if (!group) return next();
   if (!isAdmin(group.id, req.user.id)) {
@@ -102,63 +114,68 @@ router.get(/^\/club(\d+)\/edit$/, requireAuth, (req, res, next) => {
   res.render('group_form', { group, error: null });
 });
 
-router.post(/^\/club(\d+)\/edit$/, requireAuth, imageUpload.single('avatar'), async (req, res, next) => {
-  const group = M.groupsQ.byId.get(Number(req.params[0]));
-  if (!group) return next();
-  if (!isAdmin(group.id, req.user.id)) {
-    return res.status(403).render('error', { code: 403, message: 'Редактировать группу может только её создатель.' });
-  }
-  const name = trim(req.body.name, 80);
-  if (!name) return res.render('group_form', { group, error: 'Укажите название группы.' });
+router.post(/^\/club(\d+)\/edit$/, requireAuth,
+  uploadThen(media.uploadImage.single('avatar')), async (req, res, next) => {
+    const group = M.groupsQ.byId.get(Number(req.params[0]));
+    if (!group) return next();
+    if (!isAdmin(group.id, req.user.id)) {
+      return res.status(403).render('error', { code: 403, message: 'Редактировать группу может только её создатель.' });
+    }
+    const name = trim(req.body.name, 80);
+    if (!name) return res.render('group_form', { group, error: 'Укажите название группы.' });
 
-  if (req.file) {
-    const saved = await saveImage(req.file.buffer, 'avatars', { width: 400, thumb: 200, square: true });
-    if (group.avatar) removeFile(group.avatar);
-    db.prepare('UPDATE groups SET avatar = ? WHERE id = ?').run(saved.file, group.id);
-  }
-  db.prepare('UPDATE groups SET name = ?, description = ?, kind = ? WHERE id = ?')
-    .run(name, trim(req.body.description, 2000), req.body.kind === 'public' ? 'public' : 'group', group.id);
-  res.redirect('/club' + group.id);
-});
+    if (req.file) {
+      const type = media.detect(req.file.buffer, req.file.mimetype);
+      if (!type || type.kind !== 'image') {
+        return res.render('group_form', { group, error: 'Аватар должен быть изображением.' });
+      }
+      const saved = await media.saveImage(req.file.buffer, 'avatars', { width: 400, thumb: 200, square: true });
+      if (group.avatar) {
+        media.removeFile(group.avatar);
+        media.removeFile(media.thumbOf(group.avatar));
+      }
+      db.prepare('UPDATE groups SET avatar = ? WHERE id = ?').run(saved.file, group.id);
+    }
+    db.prepare('UPDATE groups SET name = ?, description = ?, kind = ? WHERE id = ?')
+      .run(name, trim(req.body.description, 2000), req.body.kind === 'public' ? 'public' : 'group', group.id);
+    res.redirect('/club' + group.id);
+  });
 
-router.get(/^\/club(\d+)\/delete$/, requireAuth, (req, res, next) => {
+router.post(/^\/club(\d+)\/delete$/, requireAuth, (req, res, next) => {
   const group = M.groupsQ.byId.get(Number(req.params[0]));
   if (!group) return next();
   if (!isAdmin(group.id, req.user.id)) {
     return res.status(403).render('error', { code: 403, message: 'Удалить группу может только её создатель.' });
   }
-  const posts = db.prepare("SELECT id FROM posts WHERE owner_type = 'group' AND owner_id = ?").all(group.id);
-  for (const post of posts) {
-    db.prepare("DELETE FROM comments WHERE target_type = 'post' AND target_id = ?").run(post.id);
-    db.prepare("DELETE FROM likes WHERE target_type = 'post' AND target_id = ?").run(post.id);
+  for (const post of db.prepare("SELECT id FROM posts WHERE owner_type = 'group' AND owner_id = ?").all(group.id)) {
+    publish.deletePost(post.id);
   }
-  db.prepare("DELETE FROM posts WHERE owner_type = 'group' AND owner_id = ?").run(group.id);
-  if (group.avatar) removeFile(group.avatar);
+  if (group.avatar) {
+    media.removeFile(group.avatar);
+    media.removeFile(media.thumbOf(group.avatar));
+  }
   db.prepare('DELETE FROM groups WHERE id = ?').run(group.id);
   res.redirect('/groups');
 });
 
-router.post(/^\/club(\d+)\/wall$/, requireAuth, imageUpload.single('photo'), async (req, res, next) => {
-  const group = M.groupsQ.byId.get(Number(req.params[0]));
-  if (!group) return next();
-  if (!M.groupsQ.isMember.get(group.id, req.user.id)) {
-    return res.status(403).render('error', { code: 403, message: 'Писать на стену могут только участники группы.' });
-  }
-  const text = trim(req.body.text, 4000);
-  let photoId = null;
+router.post(/^\/club(\d+)\/wall$/, requireAuth, postLimit,
+  uploadThen(media.uploadAny.array('files', 10)), async (req, res, next) => {
+    const group = M.groupsQ.byId.get(Number(req.params[0]));
+    if (!group) return next();
+    if (!M.groupsQ.isMember.get(group.id, req.user.id)) {
+      return res.status(403).render('error', { code: 403, message: 'Писать на стену могут только участники группы.' });
+    }
 
-  if (req.file) {
-    const saved = await saveImage(req.file.buffer, 'photos', { width: 1280, thumb: 130 });
-    photoId = db.prepare(`
-      INSERT INTO photos (album_id, owner_id, file, thumb, description, created_at) VALUES (?, ?, ?, ?, ?, ?)
-    `).run(wallAlbum(req.user.id).id, req.user.id, saved.file, saved.thumb, '', now()).lastInsertRowid;
-  }
-  if (!text && !photoId) return res.redirect('/club' + group.id);
+    const { errors } = await publish.createPost({
+      ownerType: 'group',
+      ownerId: group.id,
+      authorId: req.user.id,
+      text: req.body.text,
+      files: req.files,
+    });
 
-  db.prepare(`
-    INSERT INTO posts (owner_type, owner_id, author_id, text, photo_id, created_at) VALUES ('group', ?, ?, ?, ?, ?)
-  `).run(group.id, req.user.id, text, photoId, now());
-  res.redirect('/club' + group.id);
-});
+    const back = backTo(req, '/club' + group.id);
+    res.redirect(errors.length ? back + '?err=' + encodeURIComponent(errors.join(' ')) : back);
+  });
 
 module.exports = router;

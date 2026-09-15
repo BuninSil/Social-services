@@ -4,7 +4,7 @@
   <span class="right">
     <a href="/photos/<%= owner.id %>">Все альбомы</a>
     <% if (owner.id === me.id) { %> &middot; <a href="/photos/upload?album=<%= album.id %>">Загрузить сюда</a>
-      &middot; <a href="/album<%= owner.id %>_<%= album.id %>/delete" data-confirm="Удалить альбом со всеми фотографиями?">Удалить альбом</a><% } %>
+      &middot; <%- act(csrf, '/album/' + album.id + '/delete', 'Удалить альбом', { confirm: 'Удалить альбом со всеми фотографиями?' }) %><% } %>
   </span>
 </h1>
 <% if (album.description) { %><div class="gray" style="margin-bottom:8px"><%= album.description %></div><% } %>

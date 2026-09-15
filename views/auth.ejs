@@ -13,6 +13,7 @@
       <div class="block_body">
         <% if (mode === 'register') { %>
           <form method="post" action="/register">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
             <div class="form_row"><div class="lbl">Имя</div>
               <input class="text wide" type="text" name="first_name" value="<%= form.first_name || '' %>" maxlength="30"></div>
             <div class="form_row"><div class="lbl">Фамилия</div>
@@ -24,7 +25,7 @@
                 <option value="m">мужской</option>
                 <option value="f"<%= form.sex === 'f' ? ' selected' : '' %>>женский</option>
               </select></div>
-            <div class="form_row"><div class="lbl">Пароль</div>
+            <div class="form_row"><div class="lbl">Пароль <span class="gray small">от <%= minPassword %> символов</span></div>
               <input class="text wide" type="password" name="password"></div>
             <div class="form_row"><div class="lbl">Пароль ещё раз</div>
               <input class="text wide" type="password" name="password2"></div>
@@ -33,6 +34,7 @@
           </form>
         <% } else { %>
           <form method="post" action="/login">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
             <input type="hidden" name="next" value="<%= next || '' %>">
             <div class="form_row"><div class="lbl">Логин</div>
               <input class="text wide" type="text" name="login" value="<%= form.login || '' %>"></div>
