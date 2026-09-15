@@ -530,6 +530,253 @@ form.act { display: inline; margin: 0; }
 .pactions .link_btn { font-size: 10px; }
 .reply .link_btn { font-size: 10px; }
 
-.theme_pick { margin-left: 14px; }
+/* ==========================================================================
+   ОБНОВЛЁННОЕ ОФОРМЛЕНИЕ
+   Тот же каркас 2010 года и та же синева, но воздуха больше: системный шрифт,
+   аккуратные скругления, мягкие тени вместо жёстких рамок, плавные наведения.
+   Раскладка не меняется — только подача.
+   ========================================================================== */
 
-.attach_box .small { white-space: nowrap; }
+body {
+  font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 13px;
+  line-height: 18px;
+  color: #2c2d2e;
+  background: #edeef0;
+}
+
+input, textarea, select, button { font-family: inherit; font-size: 13px; }
+
+a { color: #2a5885; transition: color .12s ease; }
+a:hover { color: #3b6ea8; }
+
+h1 { font-size: 19px; line-height: 24px; color: #222; font-weight: 600; }
+h2 { font-size: 15px; color: #222; font-weight: 600; }
+
+/* ------------------------------------------------------------------ шапка */
+
+#header {
+  background: #5181b8;
+  border-bottom: 0;
+  height: 44px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .18);
+}
+#header_in { width: 960px; }
+#logo { height: 44px; line-height: 44px; font-size: 16px; font-weight: 600; }
+#logo .logo_box {
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-size: 14px;
+  color: #5181b8;
+}
+#head_search { margin-top: 9px; }
+#head_search input.head_q {
+  width: 220px;
+  border: 0;
+  border-radius: 14px;
+  padding: 5px 12px;
+  background: rgba(255, 255, 255, .22);
+  color: #fff;
+}
+#head_search input.head_q::placeholder { color: rgba(255, 255, 255, .75); }
+#head_search input.head_q:focus { background: #fff; color: #2c2d2e; outline: none; }
+#head_nav { height: 44px; line-height: 44px; }
+
+/* ---------------------------------------------------------------- каркас */
+
+#page { width: 960px; padding-top: 18px; }
+#side { width: 178px; }
+#content { margin-left: 196px; }
+
+#side .me img { border: 0; padding: 0; border-radius: 6px; }
+#side .me .name { font-weight: 600; padding-top: 7px; }
+
+ul#left_menu {
+  background: transparent;
+  margin-bottom: 14px;
+}
+ul#left_menu li a {
+  border-bottom: 0;
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 1px;
+  color: #2a5885;
+  transition: background .12s ease, color .12s ease;
+}
+ul#left_menu li a:hover { background: #e5ebf1; }
+ul#left_menu li a.sel { background: #5181b8; color: #fff; }
+ul#left_menu li a.sel:hover { background: #4a76a8; }
+ul#left_menu li a .cnt { border-radius: 9px; padding: 1px 6px; font-size: 11px; }
+
+/* ----------------------------------------------------------------- блоки */
+
+.block {
+  border: 0;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 0 0 1px rgba(0, 0, 0, .04);
+  overflow: hidden;
+}
+.block_head {
+  background: #fff;
+  border-bottom: 1px solid #e7e8ec;
+  padding: 11px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #222;
+}
+.block_head .right { font-size: 13px; color: #656565; }
+.block_body { padding: 14px; }
+.block_foot { background: #fafbfc; border-top: 1px solid #e7e8ec; padding: 10px 14px; }
+
+.page_title { margin-bottom: 12px; }
+
+/* ------------------------------------------------------- кнопки и поля */
+
+.button {
+  background: #e5ebf1;
+  border: 0;
+  border-radius: 6px;
+  padding: 7px 14px;
+  color: #2a5885;
+  font-weight: 500;
+  transition: background .12s ease;
+}
+.button:hover { background: #dbe2eb; }
+.button_blue { background: #5181b8; color: #fff; }
+.button_blue:hover { background: #4a76a8; }
+.button_small { padding: 4px 10px; }
+
+input.text, textarea.text, select.text {
+  border: 1px solid #d3d9de;
+  border-radius: 6px;
+  padding: 7px 10px;
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+input.text:focus, textarea.text:focus {
+  border-color: #5181b8;
+  box-shadow: 0 0 0 3px rgba(81, 129, 184, .12);
+}
+
+.error, .notice { border-radius: 8px; padding: 10px 14px; border: 0; }
+.error { background: #faebeb; color: #b03c3c; }
+.notice { background: #eaf6e4; color: #4b7b35; }
+
+/* --------------------------------------------------------------- профиль */
+
+#profile_left { width: 220px; }
+#profile_right { margin-left: 240px; }
+
+.pavatar { border: 0; padding: 0; border-radius: 10px; width: 220px; }
+.profile_actions { margin-top: 12px; }
+.profile_actions a, .profile_actions form.act {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.pname { font-size: 21px; font-weight: 600; color: #222; }
+.pstatus { color: #626d7a; font-style: normal; padding: 4px 0 12px; }
+
+table.pinfo td { padding: 4px 0; line-height: 19px; }
+table.pinfo td.label { color: #818c99; width: 145px; }
+table.pinfo tr.section td { color: #222; border-bottom: 1px solid #e7e8ec; padding-top: 14px; }
+
+.counters { border-top: 1px solid #e7e8ec; margin-top: 12px; padding-top: 10px; }
+.counters a { margin-right: 16px; }
+
+/* ----------------------------------------------------------------- стена */
+
+.post { border-bottom: 1px solid #e7e8ec; padding: 14px; }
+.post .ava img { border: 0; padding: 0; border-radius: 50%; }
+.post .phead .author { font-weight: 600; color: #2c2d2e; }
+.post .phead .date { color: #939393; font-size: 12px; }
+.post .ptext { padding-top: 2px; }
+.post .pactions { padding-top: 8px; font-size: 12px; }
+.post.pinned { background: #fafbfc; }
+
+.replies { border-left: 0; margin-left: 66px; padding-left: 0; }
+.reply { padding: 8px 0 0; }
+.reply .ava img { border: 0; padding: 0; border-radius: 50%; }
+.reply .body {
+  background: #f5f6f8;
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-left: 42px;
+}
+
+.attachments img { border: 0; padding: 0; border-radius: 8px; }
+.att_photos .att_photo img { border-radius: 8px; }
+.att_video video { border: 0; border-radius: 8px; }
+.att_doc { background-position: 0 6px; }
+
+.repost { border-left: 2px solid #dfe3e8; border-radius: 0 8px 8px 0; background: #fafbfc; padding: 8px 12px; }
+.repost .rhead img { border: 0; padding: 0; border-radius: 50%; }
+
+/* --------------------------------------------------------- люди и списки */
+
+.people_row, .dlg_row, .notif, .group_row, .doc_row, .audio_row {
+  border-bottom: 1px solid #e7e8ec;
+  padding: 12px 14px;
+}
+.people_row .ava img, .dlg_row .ava img, .notif .ava img,
+.group_row .ava img, .friend_mini img, .msg .ava img {
+  border: 0;
+  padding: 0;
+  border-radius: 50%;
+}
+.people_row .name, .dlg_row .name, .group_row .name { font-weight: 600; font-size: 14px; }
+.people_row:hover, .dlg_row:hover { background: #fafbfc; }
+.dlg_row.unread { background: #f0f5fb; }
+.notif.fresh { background: #f0f5fb; }
+
+.online_dot { color: #4bb34b; }
+
+/* ---------------------------------------------------------------- беседы */
+
+#chat { padding: 14px; }
+.msg { border-bottom: 0; padding: 8px 0; }
+.msg .body { margin-left: 44px; }
+.msg .mtext {
+  display: inline-block;
+  background: #f5f6f8;
+  border-radius: 12px;
+  padding: 7px 12px;
+  margin-top: 3px;
+}
+.msg.out .mtext { background: #e3effd; }
+
+/* ----------------------------------------------------------------- фото */
+
+.album_item img, .photo_item img, .video_item img {
+  border: 0;
+  padding: 0;
+  border-radius: 8px;
+}
+#photo_view { background: #1a1a1a; padding: 16px; }
+#photo_view img { border: 0; padding: 0; border-radius: 6px; }
+
+/* ----------------------------------------------------------------- табы */
+
+.tabs { border-bottom: 1px solid #dfe3e8; }
+.tabs a {
+  border: 0;
+  background: transparent;
+  border-radius: 6px 6px 0 0;
+  padding: 7px 14px;
+  color: #656565;
+}
+.tabs a:hover { background: #e5ebf1; text-decoration: none; }
+.tabs a.sel { background: #fff; color: #2a5885; box-shadow: 0 -1px 0 #dfe3e8 inset; }
+
+.pagination a, .pagination span { border-radius: 6px; border-color: #dfe3e8; padding: 4px 9px; }
+.pagination span.cur { background: #5181b8; border-color: #5181b8; }
+
+#footer { width: 960px; border-top: 1px solid #dfe3e8; padding-top: 14px; }
+.theme_pick { color: #939393; }
+
+#live_notice { border-radius: 8px; border: 0; box-shadow: 0 4px 16px rgba(0, 0, 0, .18); }
+
+.theme_pick { margin-left: 14px; color: #939393; }
+
+.attach_box .small { white-space: nowrap; font-size: 10px; }
+.attach_box { text-align: right; max-width: 62%; }

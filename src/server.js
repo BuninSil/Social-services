@@ -91,6 +91,18 @@ const sessionParser = session({
   },
 });
 app.use(sessionParser);
+
+/**
+ * Оформление выбирается на лету: /id1?theme=neon и дальше запоминается.
+ * Нужно, чтобы сравнивать варианты дизайна не пересобирая ничего.
+ */
+const THEMES = new Set(['vo', 'neon', 'fresh', 'modern']);
+app.use((req, res, next) => {
+  if (req.query.theme && THEMES.has(req.query.theme)) req.session.theme = req.query.theme;
+  res.locals.theme = (req.session && req.session.theme) || 'vo';
+  next();
+});
+
 app.use(loadUser);
 app.use(security.csrfProtect);
 

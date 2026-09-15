@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title><%= typeof title !== 'undefined' && title ? title + ' | ВОнлайне' : 'ВОнлайне' %></title>
-<link rel="stylesheet" href="/css/vo.css">
+<link rel="stylesheet" href="/css/<%= theme === 'vo' ? 'vo' : 'vo-' + theme %>.css">
 <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
 </head>
 <body<% if (me) { %> data-uid="<%= me.id %>" data-csrf="<%= csrf %>"<% } %>>
