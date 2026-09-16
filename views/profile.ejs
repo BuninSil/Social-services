@@ -1,5 +1,9 @@
 <%- include('partials/head', { title: u.fullName(user), nav: user.id === (me && me.id) ? 'profile' : '' }) %>
 
+<div class="page_title"><%= u.fullName(user) %>
+  <span class="right"><%= online(user.id) ? 'Online' : (u.lastSeen(user) || '') %></span>
+</div>
+
 <div id="profile_left">
   <img class="pavatar" src="<%= avatar(user, 'full') %>" width="200" alt="">
   <div class="profile_actions">

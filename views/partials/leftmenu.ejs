@@ -1,5 +1,5 @@
 <ul id="left_menu">
-  <li><a href="/id<%= me.id %>" class="<%= nav === 'profile' ? 'sel' : '' %>">Моя Страница</a></li>
+  <li><a href="/id<%= me.id %>" class="<%= nav === 'profile' ? 'sel' : '' %>">Моя Страница<span class="menu_edit">ред.</span></a></li>
   <li><a href="/feed" class="<%= nav === 'feed' ? 'sel' : '' %>">Мои Новости</a></li>
   <li><a href="/notifications" id="menu_notifications" class="<%= nav === 'notifications' ? 'sel' : '' %>"><% if (counters.notifications) { %><span class="cnt"><%= counters.notifications %></span><% } %>Мои Ответы</a></li>
   <li><a href="/im" id="menu_messages" class="<%= nav === 'im' ? 'sel' : '' %>"><% if (counters.messages) { %><span class="cnt"><%= counters.messages %></span><% } %>Мои Сообщения</a></li>
