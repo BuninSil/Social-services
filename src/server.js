@@ -2,6 +2,7 @@
 
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const http = require('http');
 const crypto = require('crypto');
 const express = require('express');
@@ -153,12 +154,44 @@ ws.onPresence((userId, online) => {
   ws.sendMany(M.friendIds(userId), { kind: 'presence', user_id: userId, online });
 });
 
+/** Адреса этой машины в локальной сети — чтобы было что скинуть друзьям. */
+function localAddresses() {
+  const found = [];
+  for (const list of Object.values(os.networkInterfaces())) {
+    for (const net of list || []) {
+      if (net.family === 'IPv4' && !net.internal) found.push(net.address);
+    }
+  }
+  return found;
+}
+
+/** Понятное объяснение вместо стека, если порт уже занят. */
+server.on('error', (err) => {
+  if (err && err.code === 'EADDRINUSE') {
+    console.error('');
+    console.error('  Порт ' + PORT + ' уже занят — похоже, ВОнлайне уже запущен.');
+    console.error('  Закройте то окно или запустите на другом порту: PORT=8081 npm start');
+    console.error('');
+    process.exit(1);
+  }
+  throw err;
+});
+
 server.listen(PORT, HOST, () => {
   const users = db.prepare('SELECT COUNT(*) n FROM users').get().n;
-  console.log('ВОнлайне слушает http://' + HOST + ':' + PORT + ' (пользователей: ' + users + ')');
-  if (!media.ffmpegAvailable()) {
-    console.log('ffmpeg не найден: видео примут, но без обложки и длительности.');
+  console.log('');
+  console.log('  ВОнлайне запущен. Пользователей: ' + users);
+  console.log('  На этом компьютере:  http://localhost:' + PORT);
+  for (const address of localAddresses()) {
+    console.log('  Друзьям в локалке:   http://' + address + ':' + PORT);
   }
+  if (!media.ffmpegAvailable()) {
+    console.log('');
+    console.log('  ffmpeg не найден: видео примут, но без обложки и длительности.');
+  }
+  console.log('');
+  console.log('  Остановить — Ctrl+C.');
+  console.log('');
 });
 
 function shutdown() {
