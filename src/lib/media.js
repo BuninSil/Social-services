@@ -219,11 +219,14 @@ function removeFile(relPath) {
 /** Одна общая форма приёма: текст + любые файлы, тип разберём по содержимому. */
 const uploadAny = multer({
   storage: multer.memoryStorage(),
+  // Без этого имена файлов читаются как latin1 и «Отчёт.pdf» приезжает кракозябрами.
+  defParamCharset: 'utf8',
   limits: { fileSize: LIMITS.video, files: 10, fields: 40 },
 });
 
 const uploadImage = multer({
   storage: multer.memoryStorage(),
+  defParamCharset: 'utf8',
   limits: { fileSize: LIMITS.image, files: 20 },
 });
 

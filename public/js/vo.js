@@ -282,5 +282,19 @@
     });
   }
 
+  /* --------------------------------------------------- меню лентой на телефоне */
+
+  /* На узком экране левое меню превращается в горизонтальную ленту: текущий
+     пункт может оказаться за краем, поэтому подкручиваем ленту к нему. */
+  (function () {
+    var menu = document.getElementById('left_menu');
+    if (!menu) return;
+    var current = menu.querySelector('a.sel');
+    if (!current) return;
+    if (menu.scrollWidth <= menu.clientWidth + 1) return;
+    var shift = current.offsetLeft - (menu.clientWidth - current.offsetWidth) / 2;
+    menu.scrollLeft = Math.max(0, shift);
+  })();
+
   connect();
 })();

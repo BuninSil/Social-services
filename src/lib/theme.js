@@ -45,6 +45,14 @@ function nextTheme(current) {
 /** Значок для кнопки переключения. */
 const ICONS = { vo: '☀', dark: '☾', neon: '✦', fresh: '☀', modern: '☀' };
 
+/** Цвет системной строки браузера на телефоне — под цвет шапки темы. */
+const BAR_COLORS = { vo: '#5e82a6', dark: '#2a3a4e', fresh: '#5181b8', modern: '#4680c2' };
+
+function barColor(name, neon) {
+  if (name === 'neon') return neon && neon.bg ? neon.bg : NEON_DEFAULTS.bg;
+  return BAR_COLORS[name] || BAR_COLORS.vo;
+}
+
 function neonColors(user) {
   if (!user) return Object.assign({}, NEON_DEFAULTS);
   return {
@@ -55,6 +63,6 @@ function neonColors(user) {
 }
 
 module.exports = {
-  CYCLE, THEMES, ICONS, NEON_DEFAULTS, NEON_PRESETS,
-  isTheme, color, stylesheet, nextTheme, neonColors,
+  CYCLE, THEMES, ICONS, NEON_DEFAULTS, NEON_PRESETS, BAR_COLORS,
+  isTheme, color, stylesheet, nextTheme, neonColors, barColor,
 };

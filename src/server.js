@@ -110,6 +110,7 @@ app.use((req, res, next) => {
   res.locals.themeTitle = theme.THEMES[res.locals.theme].title;
   res.locals.themeIcon = theme.ICONS[res.locals.theme];
   res.locals.neon = theme.neonColors(req.user);
+  res.locals.themeColor = theme.barColor(res.locals.theme, res.locals.neon);
   next();
 });
 app.use(security.csrfProtect);
