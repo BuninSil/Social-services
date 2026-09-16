@@ -496,3 +496,6 @@ ul#left_menu li a { font-size: 12px; line-height: 16px; }
   margin-right: 2px;
   vertical-align: 0;
 }
+
+/* Системные переключатели — в цвет темы. */
+input[type=radio], input[type=checkbox] { accent-color: #5e82a6; }

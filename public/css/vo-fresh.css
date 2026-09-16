@@ -658,3 +658,5 @@ table.pinfo tr.section td { color: #222; border-bottom: 1px solid #edeef0; }
 .color_pick { width: 48px; height: 24px; padding: 0; border: 1px solid currentColor; background: none; cursor: pointer; vertical-align: middle; opacity: .9; }
 .preset_btn { margin: 0 6px 6px 0; }
 .preset_dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 2px; vertical-align: 0; }
+
+input[type=radio], input[type=checkbox] { accent-color: #5181b8; }

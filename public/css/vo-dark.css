@@ -505,11 +505,7 @@ body { background: var(--bg); color: var(--text); }
 a, a:visited { color: var(--link); }
 h1, h2 { color: var(--text); }
 
-/* Светлые заглушки на тёмном фоне заменяем тёмными. */
-img[src^="/img/camera"] { content: url("/img/camera_dark.svg"); }
-img[src^="/img/group"] { content: url("/img/group_dark.svg"); }
-img[src^="/img/chat"] { content: url("/img/chat_dark.svg"); }
-img[src^="/img/video_200"] { content: url("/img/video_dark.svg"); }
+
 
 #header { background: transparent; }
 #header_in { background: var(--head); }
@@ -626,3 +622,52 @@ a.like_link.liked { color: #e06c6c; }
 .color_pick { width: 48px; height: 24px; padding: 0; border: 1px solid currentColor; background: none; cursor: pointer; vertical-align: middle; opacity: .9; }
 .preset_btn { margin: 0 6px 6px 0; }
 .preset_dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 2px; vertical-align: 0; }
+
+/* Заглушки вместо аватара рисуем самой темой, а не отдельными картинками:
+   пустое изображение плюс силуэт из градиентов на тех же переменных.
+   Селектор с тремя условиями — чтобы перебить светлые правила базы. */
+img[src^="/img/"][src*="camera"][src$=".svg"],
+img[src^="/img/"][src*="group"][src$=".svg"],
+img[src^="/img/"][src*="chat"][src$=".svg"],
+img[src^="/img/"][src*="video_200"][src$=".svg"] {
+  content: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'%3E%3C/svg%3E");
+  background-color: color-mix(in srgb, var(--panel) 88%, var(--link));
+  background-repeat: no-repeat;
+  object-fit: cover;
+}
+
+img[src^="/img/"][src*="camera"][src$=".svg"] {
+  background-image:
+    radial-gradient(circle at 50% 107%,
+      color-mix(in srgb, var(--panel) 62%, var(--link)) 0 38%, transparent 38.5%),
+    radial-gradient(circle at 50% 36%,
+      color-mix(in srgb, var(--panel) 62%, var(--link)) 0 17%, transparent 17.5%);
+}
+
+img[src^="/img/"][src*="group"][src$=".svg"] {
+  background-image:
+    radial-gradient(circle at 72% 118%,
+      color-mix(in srgb, var(--panel) 72%, var(--link)) 0 32%, transparent 32.5%),
+    radial-gradient(circle at 66% 39%,
+      color-mix(in srgb, var(--panel) 72%, var(--link)) 0 11%, transparent 11.5%),
+    radial-gradient(circle at 34% 112%,
+      color-mix(in srgb, var(--panel) 58%, var(--link)) 0 34%, transparent 34.5%),
+    radial-gradient(circle at 36% 35%,
+      color-mix(in srgb, var(--panel) 58%, var(--link)) 0 13%, transparent 13.5%);
+}
+
+img[src^="/img/"][src*="chat"][src$=".svg"] {
+  background-image:
+    radial-gradient(circle at 66% 62%,
+      color-mix(in srgb, var(--panel) 72%, var(--link)) 0 24%, transparent 24.5%),
+    radial-gradient(circle at 38% 42%,
+      color-mix(in srgb, var(--panel) 56%, var(--link)) 0 27%, transparent 27.5%);
+}
+
+img[src^="/img/"][src*="video_200"][src$=".svg"] {
+  background-image:
+    radial-gradient(circle at 50% 50%,
+      color-mix(in srgb, var(--panel) 45%, var(--link)) 0 22%, transparent 22.5%);
+}
+
+input[type=radio], input[type=checkbox] { accent-color: var(--link); }
