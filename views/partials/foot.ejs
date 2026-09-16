@@ -5,11 +5,7 @@
 <div id="footer">
   ВОнлайне &copy; <%= new Date().getFullYear() %> &middot; сеть для своих
   <span class="theme_pick">
-    оформление:
-    <a href="?theme=vo">старое</a> &middot;
-    <a href="?theme=fresh">обновлённое</a> &middot;
-    <a href="?theme=neon">неон</a> &middot;
-    <a href="?theme=modern">современное</a>
+    оформление: <%= themeTitle %><% if (me) { %> &middot; <a href="/settings#theme">настроить</a><% } %>
   </span>
   <span style="float:right">
     <a href="/help">Помощь</a> &middot;

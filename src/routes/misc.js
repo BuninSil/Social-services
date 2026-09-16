@@ -4,6 +4,8 @@ const express = require('express');
 const db = require('../db');
 const M = require('../lib/models');
 const { requireAuth } = require('../lib/auth');
+const theme = require('../lib/theme');
+const { backTo } = require('../lib/security');
 
 const router = express.Router();
 const PER_PAGE = 20;
@@ -50,6 +52,17 @@ router.get('/search', requireAuth, (req, res) => {
 });
 
 router.get('/help', (req, res) => res.render('help', {}));
+
+/** Кнопка в шапке: светлая → тёмная → неоновая и снова по кругу. */
+router.post('/theme', (req, res) => {
+  const current = (req.user && req.user.theme) || (req.session && req.session.theme) || 'vo';
+  const next = theme.isTheme(req.body.theme) ? req.body.theme : theme.nextTheme(current);
+
+  req.session.theme = next;
+  if (req.user) db.prepare('UPDATE users SET theme = ? WHERE id = ?').run(next, req.user.id);
+
+  res.redirect(backTo(req, '/'));
+});
 
 /**
  * Короткое имя страницы: /ivan ведёт на профиль, как в ВК.

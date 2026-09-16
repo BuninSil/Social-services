@@ -63,6 +63,15 @@
     }
   });
 
+  /* Живой предпросмотр цветов неоновой темы прямо в настройках. */
+  document.addEventListener('input', function (e) {
+    if (!e.target.classList || !e.target.classList.contains('color_pick')) return;
+    var name = e.target.dataset.var;
+    if (name) document.documentElement.style.setProperty(name, e.target.value);
+    var label = e.target.parentNode.querySelector('.small');
+    if (label) label.textContent = e.target.value;
+  });
+
   /* Ctrl+Enter отправляет форму — как в старом ВК */
   document.addEventListener('keydown', function (e) {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && e.target.tagName === 'TEXTAREA') {

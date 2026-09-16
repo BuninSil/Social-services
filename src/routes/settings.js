@@ -5,7 +5,8 @@ const db = require('../db');
 const media = require('../lib/media');
 const { requireAuth, hashPassword, verifyPassword } = require('../lib/auth');
 const { trim } = require('../lib/util');
-const { uploadThen, rateLimit } = require('../lib/security');
+const { uploadThen, rateLimit, backTo } = require('../lib/security');
+const theme = require('../lib/theme');
 
 const router = express.Router();
 const passwordLimit = rateLimit('password', 15 * 60000, 10, 'Слишком много попыток. Подождите.');
@@ -37,6 +38,8 @@ function view(req, res, error, notice) {
     error: error || null,
     notice: notice || (req.query.saved ? 'Изменения сохранены.' : null),
     minPassword: MIN_PASSWORD,
+    themes: theme.THEMES,
+    presets: theme.NEON_PRESETS,
   });
 }
 
@@ -116,6 +119,28 @@ router.post('/settings/password', requireAuth, passwordLimit, (req, res) => {
   }
 
   view(req, res, null, 'Пароль изменён. Остальные сеансы завершены.');
+});
+
+/**
+ * Оформление: выбор темы и свои цвета для неоновой.
+ * Цвета принимаем только строгим шестизначным hex — они попадают в разметку.
+ */
+router.post('/settings/theme', requireAuth, (req, res) => {
+  const chosen = theme.isTheme(req.body.theme) ? req.body.theme : 'vo';
+  const preset = theme.NEON_PRESETS.find((p) => p.id === req.body.preset);
+  const defaults = theme.NEON_DEFAULTS;
+
+  const colors = preset ? preset : {
+    c1: theme.color(req.body.neon_c1, defaults.c1),
+    c2: theme.color(req.body.neon_c2, defaults.c2),
+    bg: theme.color(req.body.neon_bg, defaults.bg),
+  };
+
+  db.prepare('UPDATE users SET theme = ?, neon_c1 = ?, neon_c2 = ?, neon_bg = ? WHERE id = ?')
+    .run(chosen, colors.c1, colors.c2, colors.bg, req.user.id);
+  req.session.theme = chosen;
+
+  res.redirect(backTo(req, '/settings') + '#theme');
 });
 
 /** Удаление страницы вместе со всем содержимым. */

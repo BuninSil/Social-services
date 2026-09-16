@@ -471,3 +471,28 @@ ul#left_menu li a.sel .menu_edit { color: #dbe4ee; }
 ul#left_menu li a { font-size: 12px; line-height: 16px; }
 
 .counters a { white-space: nowrap; }
+
+/* Кнопка смены оформления в шапке. */
+.theme_switch { display: inline; }
+.link_btn.theme_btn {
+  color: #fff;
+  font-size: 14px;
+  line-height: 14px;
+  padding: 0 2px;
+  vertical-align: -1px;
+}
+.link_btn.theme_btn:hover { text-decoration: none; opacity: .8; }
+
+/* Блок выбора оформления в настройках. */
+.theme_option { display: block; padding: 3px 0; }
+.theme_option input { vertical-align: -1px; margin-right: 4px; }
+.theme_option .gray { margin-left: 4px; }
+.color_pick { width: 46px; height: 22px; padding: 0; border: 1px solid #c0cad5; background: none; cursor: pointer; vertical-align: middle; }
+.preset_btn { margin: 0 6px 6px 0; }
+.preset_dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-right: 2px;
+  vertical-align: 0;
+}

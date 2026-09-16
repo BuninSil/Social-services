@@ -106,6 +106,63 @@
   </div>
 </div>
 
+<div class="block" id="theme">
+  <div class="block_head">Оформление</div>
+  <div class="block_body">
+    <form method="post" action="/settings/theme" id="theme_form">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <input type="hidden" name="back" value="/settings">
+
+      <div class="form_row"><div class="lbl">Тема</div>
+        <% Object.keys(themes).forEach(function (key) { %>
+          <label class="theme_option">
+            <input type="radio" name="theme" value="<%= key %>"<%= theme === key ? ' checked' : '' %>>
+            <b><%= themes[key].title %></b>
+            <span class="gray"><%= themes[key].hint %></span>
+          </label>
+        <% }); %>
+      </div>
+
+      <div class="form_row" style="padding-top:8px">
+        <div class="lbl">Цвета неоновой темы</div>
+        <table class="form_table">
+          <tr>
+            <td class="label">Основной акцент</td>
+            <td><input type="color" name="neon_c1" value="<%= neon.c1 %>" class="color_pick"
+                       data-var="--cyan"> <span class="gray small"><%= neon.c1 %></span></td>
+          </tr>
+          <tr>
+            <td class="label">Второй акцент</td>
+            <td><input type="color" name="neon_c2" value="<%= neon.c2 %>" class="color_pick"
+                       data-var="--pink"> <span class="gray small"><%= neon.c2 %></span></td>
+          </tr>
+          <tr>
+            <td class="label">Фон</td>
+            <td><input type="color" name="neon_bg" value="<%= neon.bg %>" class="color_pick"
+                       data-var="--bg"> <span class="gray small"><%= neon.bg %></span></td>
+          </tr>
+        </table>
+        <div class="gray small" style="padding-top:4px">
+          Из этих трёх цветов считается вся палитра: подсветка, рамки, кнопки и ссылки.
+          При включённой неоновой теме страница меняется прямо во время выбора.
+        </div>
+      </div>
+
+      <div class="form_row">
+        <div class="lbl">Готовые наборы</div>
+        <% presets.forEach(function (p) { %>
+          <button class="button button_small preset_btn" type="submit" name="preset" value="<%= p.id %>">
+            <span class="preset_dot" style="background:<%= p.c1 %>"></span><span class="preset_dot" style="background:<%= p.c2 %>"></span>
+            <%= p.title %>
+          </button>
+        <% }); %>
+      </div>
+
+      <div style="padding-top:8px"><button class="button button_blue" type="submit">Сохранить оформление</button></div>
+    </form>
+  </div>
+</div>
+
 <div class="block">
   <div class="block_head">Смена пароля</div>
   <div class="block_body">

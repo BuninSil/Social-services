@@ -15,6 +15,7 @@ const M = require('./lib/models');
 const { loadUser } = require('./lib/auth');
 const SqliteStore = require('./lib/session-store');
 const security = require('./lib/security');
+const theme = require('./lib/theme');
 const ws = require('./ws');
 
 const PORT = parseInt(process.env.PORT, 10) || 8080;
@@ -91,19 +92,25 @@ const sessionParser = session({
   },
 });
 app.use(sessionParser);
+app.use(loadUser);
 
 /**
- * Оформление выбирается на лету: /id1?theme=neon и дальше запоминается.
- * Нужно, чтобы сравнивать варианты дизайна не пересобирая ничего.
+ * Оформление: у вошедшего берём из его настроек, у гостя — из сессии.
+ * Адрес вида /id1?theme=neon тоже работает — удобно поглядеть без настроек.
  */
-const THEMES = new Set(['vo', 'neon', 'fresh', 'modern']);
 app.use((req, res, next) => {
-  if (req.query.theme && THEMES.has(req.query.theme)) req.session.theme = req.query.theme;
-  res.locals.theme = (req.session && req.session.theme) || 'vo';
+  // Тема из адреса — разовый просмотр, она главнее сохранённой.
+  const asked = theme.isTheme(req.query.theme) ? req.query.theme : null;
+  if (asked) req.session.theme = asked;
+  const chosen = asked || (req.user && req.user.theme) || (req.session && req.session.theme) || 'vo';
+  res.locals.theme = theme.isTheme(chosen) ? chosen : 'vo';
+  res.locals.themeCss = theme.stylesheet(res.locals.theme);
+  res.locals.nextTheme = theme.nextTheme(res.locals.theme);
+  res.locals.themeTitle = theme.THEMES[res.locals.theme].title;
+  res.locals.themeIcon = theme.ICONS[res.locals.theme];
+  res.locals.neon = theme.neonColors(req.user);
   next();
 });
-
-app.use(loadUser);
 app.use(security.csrfProtect);
 
 app.use(require('./routes/auth'));

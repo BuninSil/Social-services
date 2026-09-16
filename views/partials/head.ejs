@@ -3,7 +3,10 @@
 <head>
 <meta charset="utf-8">
 <title><%= typeof title !== 'undefined' && title ? title + ' | ВОнлайне' : 'ВОнлайне' %></title>
-<link rel="stylesheet" href="/css/<%= theme === 'vo' ? 'vo' : 'vo-' + theme %>.css">
+<link rel="stylesheet" href="<%= themeCss %>">
+<% if (theme === 'neon') { %>
+<style>:root{--cyan:<%= neon.c1 %>;--pink:<%= neon.c2 %>;--bg:<%= neon.bg %>;}</style>
+<% } %>
 <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
 </head>
 <body<% if (me) { %> data-uid="<%= me.id %>" data-csrf="<%= csrf %>"<% } %>>
@@ -23,13 +26,27 @@
         <span class="sep">|</span>
         <a href="/help">Помощь</a>
         <span class="sep">|</span>
+        <form class="act theme_switch" method="post" action="/theme">
+          <input type="hidden" name="_csrf" value="<%= csrf %>">
+          <input type="hidden" name="back" value="<%= typeof backPath !== 'undefined' ? backPath : '' %>">
+          <button type="submit" class="link_btn theme_btn"
+                  title="Оформление: <%= themeTitle %>. Нажмите, чтобы сменить"><%= themeIcon %></button>
+        </form>
+        <span class="sep">|</span>
         <form class="act" method="post" action="/logout">
           <input type="hidden" name="_csrf" value="<%= csrf %>">
           <button type="submit" class="link_btn head_exit">Выход</button>
         </form>
       </div>
     <% } else { %>
-      <div id="head_nav"><a href="/login">Вход</a></div>
+      <div id="head_nav">
+        <form class="act theme_switch" method="post" action="/theme">
+          <input type="hidden" name="_csrf" value="<%= csrf %>">
+          <button type="submit" class="link_btn theme_btn"
+                  title="Оформление: <%= themeTitle %>"><%= themeIcon %></button>
+        </form>
+        <a href="/login">Вход</a>
+      </div>
     <% } %>
     <div class="clear"></div>
   </div>

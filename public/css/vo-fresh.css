@@ -646,3 +646,15 @@ table.pinfo tr.section td { color: #222; border-bottom: 1px solid #edeef0; }
 #live_notice { border: 0; border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, .16); }
 
 .counters a { white-space: nowrap; }
+
+.theme_switch { display: inline; }
+.link_btn.theme_btn { color: #fff; font-size: 14px; line-height: 14px; padding: 0 2px; vertical-align: -1px; }
+.link_btn.theme_btn:hover { text-decoration: none; opacity: .8; }
+
+/* Блок выбора оформления в настройках. */
+.theme_option { display: block; padding: 4px 0; }
+.theme_option input { vertical-align: -1px; margin-right: 5px; }
+.theme_option .gray { margin-left: 5px; }
+.color_pick { width: 48px; height: 24px; padding: 0; border: 1px solid currentColor; background: none; cursor: pointer; vertical-align: middle; opacity: .9; }
+.preset_btn { margin: 0 6px 6px 0; }
+.preset_dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 2px; vertical-align: 0; }

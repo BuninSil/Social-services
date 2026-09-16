@@ -229,6 +229,12 @@ function addColumn(table, name, definition) {
   }
 }
 
+// Оформление: выбранная тема и свои цвета для неоновой
+addColumn('users', 'theme', "TEXT NOT NULL DEFAULT 'vo'");
+addColumn('users', 'neon_c1', "TEXT NOT NULL DEFAULT '#2fe0ff'");
+addColumn('users', 'neon_c2', "TEXT NOT NULL DEFAULT '#ff4ecd'");
+addColumn('users', 'neon_bg', "TEXT NOT NULL DEFAULT '#070b16'");
+
 // Приватность и профиль
 addColumn('users', 'profile_who', "TEXT NOT NULL DEFAULT 'all'");
 addColumn('users', 'photos_who', "TEXT NOT NULL DEFAULT 'all'");
