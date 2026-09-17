@@ -10,8 +10,11 @@ function thumbOf(file) {
 
 /** size: 'full' | 'thumb'. Без своей фотографии отдаём серый силуэт, как раньше. */
 function avatar(user, size) {
-  if (!user || !user.avatar) return '/img/camera_200.svg';
-  return '/uploads/' + (size === 'full' ? user.avatar : thumbOf(user.avatar));
+  if (!user) return '/img/camera_200.svg';
+  if (user.avatar) return '/uploads/' + (size === 'full' ? user.avatar : thumbOf(user.avatar));
+  // Своей фотографии нет — показываем ту, что у человека в сети RetroCore.
+  if (user.rc_avatar) return user.rc_avatar;
+  return '/img/camera_200.svg';
 }
 
 function gavatar(group) {

@@ -1,5 +1,7 @@
 'use strict';
 
+const retrocore = require('./retrocore');
+
 const crypto = require('crypto');
 
 /* ------------------------------------------------------------------ CSRF */
@@ -143,18 +145,22 @@ function backTo(req, fallback) {
 
 /* ------------------------------------------------------------- заголовки */
 
+// Аватарки участников сети лежат на её сервере, поэтому при настроенном
+// входе через RetroCore картинки и переходы туда разрешаем — но только туда.
+const rcOrigin = retrocore.configured() ? ' ' + retrocore.BASE : '';
+
 const CSP = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data:",
+  "img-src 'self' data:" + rcOrigin,
   "media-src 'self' blob:",
   "connect-src 'self' ws: wss:",
   "font-src 'self'",
   "object-src 'none'",
   "frame-ancestors 'none'",
   "base-uri 'none'",
-  "form-action 'self'",
+  "form-action 'self'" + rcOrigin,
 ].join('; ');
 
 function securityHeaders(req, res, next) {

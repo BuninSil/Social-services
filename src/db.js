@@ -1,5 +1,8 @@
 'use strict';
 
+// Читаем .env до всего остального: настройки берутся из него.
+require('./lib/env');
+
 const path = require('path');
 const fs = require('fs');
 const Database = require('better-sqlite3');
@@ -250,6 +253,17 @@ addColumn('posts', 'repost_of', 'INTEGER');
 // Комментарии: редактирование и ответы
 addColumn('comments', 'edited_at', 'INTEGER');
 addColumn('comments', 'reply_to', 'INTEGER');
+
+// Вход через сеть RetroCore: свой аккаунт сети вместо логина с паролем
+addColumn('users', 'rc_id', 'INTEGER');
+addColumn('users', 'rc_username', "TEXT NOT NULL DEFAULT ''");
+addColumn('users', 'rc_avatar', "TEXT NOT NULL DEFAULT ''");
+addColumn('users', 'rc_profile', "TEXT NOT NULL DEFAULT ''");
+addColumn('users', 'rc_role', "TEXT NOT NULL DEFAULT ''");
+// Пароля у такой страницы нет: в password_hash лежит случайный мусор,
+// подобрать который нельзя, а завести свой пароль можно в настройках.
+addColumn('users', 'rc_only', 'INTEGER NOT NULL DEFAULT 0');
+db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_rc ON users(rc_id) WHERE rc_id IS NOT NULL');
 
 // Медиа: размеры и длительность
 addColumn('photos', 'width', 'INTEGER NOT NULL DEFAULT 0');

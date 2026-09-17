@@ -118,3 +118,6 @@ router.post('/logout', (req, res) => {
 });
 
 module.exports = router;
+// Нужны входу через RetroCore: он заводит страницы по тем же правилам.
+module.exports.RESERVED = RESERVED;
+module.exports.LOGIN_RE = LOGIN_RE;

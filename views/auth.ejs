@@ -11,6 +11,16 @@
     <div class="block">
       <div class="block_head"><%= mode === 'register' ? 'Регистрация' : 'Вход на сайт' %></div>
       <div class="block_body">
+        <% if (rcEnabled) { %>
+          <div style="padding-bottom:10px">
+            <a class="button button_blue" href="/connect/start<%= next ? '?next=' + encodeURIComponent(next) : '' %>"
+               style="display:block;text-align:center;padding:5px 0">Войти через RetroCore</a>
+            <div class="gray small" style="padding-top:4px">
+              Отдельная регистрация не нужна: страница заведётся сама по аккаунту сети.
+            </div>
+          </div>
+          <div class="gray" style="padding-bottom:6px">или по логину и паролю:</div>
+        <% } %>
         <% if (mode === 'register') { %>
           <form method="post" action="/register">
             <input type="hidden" name="_csrf" value="<%= csrf %>">

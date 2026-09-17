@@ -163,17 +163,48 @@
   </div>
 </div>
 
+<% if (me.rc_id) { %>
 <div class="block">
-  <div class="block_head">Смена пароля</div>
+  <div class="block_head">Аккаунт сети RetroCore</div>
   <div class="block_body">
+    <table class="form_table">
+      <tr><td class="label">В сети</td><td><b><%= me.rc_username %></b>
+        <% if (me.rc_role) { %> <span class="gray"><%= me.rc_role %></span><% } %></td></tr>
+      <% if (me.rc_profile) { %>
+        <tr><td class="label">Профиль</td><td>
+          <a href="<%= me.rc_profile %>" rel="noopener" target="_blank"><%= me.rc_profile %></a></td></tr>
+      <% } %>
+      <tr><td class="label">Вход</td><td class="gray">
+        <%= me.rc_only ? 'по кнопке «Войти через RetroCore» — пароля у страницы нет' :
+             'и через сеть, и по своему паролю' %></td></tr>
+    </table>
+    <div class="gray small" style="padding-top:4px">
+      Имя, фамилия и всё остальное здесь — ваши, они не перезаписываются из сети.
+      Пока своя фотография не загружена, показывается аватарка из RetroCore.
+    </div>
+  </div>
+</div>
+<% } %>
+
+<div class="block">
+  <div class="block_head"><%= me.rc_only ? 'Свой пароль' : 'Смена пароля' %></div>
+  <div class="block_body">
+    <% if (me.rc_only) { %>
+      <div class="gray" style="padding-bottom:6px">
+        Страница заведена через RetroCore, поэтому пароля у неё нет. Его можно завести —
+        тогда получится входить и обычным способом.
+      </div>
+    <% } %>
     <form method="post" action="/settings/password">
       <input type="hidden" name="_csrf" value="<%= csrf %>">
       <table class="form_table">
+        <% if (!me.rc_only) { %>
         <tr><td class="label">Старый пароль</td><td><input class="text" type="password" name="old_password" size="24"></td></tr>
+        <% } %>
         <tr><td class="label">Новый пароль</td><td><input class="text" type="password" name="password" size="24">
           <span class="gray small">не короче <%= minPassword %> символов</span></td></tr>
         <tr><td class="label">Ещё раз</td><td><input class="text" type="password" name="password2" size="24"></td></tr>
-        <tr><td class="label"></td><td><button class="button" type="submit">Изменить пароль</button>
+        <tr><td class="label"></td><td><button class="button" type="submit"><%= me.rc_only ? 'Завести пароль' : 'Изменить пароль' %></button>
           <span class="gray small">остальные сеансы будут завершены</span></td></tr>
       </table>
     </form>

@@ -1,5 +1,7 @@
 'use strict';
 
+require('./lib/env');
+
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -17,6 +19,7 @@ const { loadUser } = require('./lib/auth');
 const SqliteStore = require('./lib/session-store');
 const security = require('./lib/security');
 const theme = require('./lib/theme');
+const retrocore = require('./lib/retrocore');
 const ws = require('./ws');
 
 const PORT = parseInt(process.env.PORT, 10) || 8080;
@@ -111,11 +114,14 @@ app.use((req, res, next) => {
   res.locals.themeIcon = theme.ICONS[res.locals.theme];
   res.locals.neon = theme.neonColors(req.user);
   res.locals.themeColor = theme.barColor(res.locals.theme, res.locals.neon);
+  res.locals.rcEnabled = retrocore.configured();
+  res.locals.rcBase = retrocore.BASE;
   next();
 });
 app.use(security.csrfProtect);
 
 app.use(require('./routes/auth'));
+app.use(require('./routes/connect'));
 app.use(require('./routes/profile'));
 app.use(require('./routes/settings'));
 app.use(require('./routes/friends'));

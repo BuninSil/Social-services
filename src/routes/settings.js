@@ -98,14 +98,17 @@ router.post('/settings/avatar/delete', requireAuth, (req, res) => {
 router.post('/settings/password', requireAuth, passwordLimit, (req, res) => {
   const password = String(req.body.password || '');
 
-  if (!verifyPassword(String(req.body.old_password || ''), req.user.password_hash)) {
+  // У страницы, заведённой через RetroCore, старого пароля нет вовсе:
+  // в базе лежит случайный хеш. Такой странице пароль просто заводят.
+  if (!req.user.rc_only && !verifyPassword(String(req.body.old_password || ''), req.user.password_hash)) {
     return view(req, res, 'Старый пароль указан неверно.');
   }
   const problem = passwordProblem(password);
   if (problem) return view(req, res, problem);
   if (password !== String(req.body.password2 || '')) return view(req, res, 'Новые пароли не совпадают.');
 
-  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashPassword(password), req.user.id);
+  db.prepare('UPDATE users SET password_hash = ?, rc_only = 0 WHERE id = ?')
+    .run(hashPassword(password), req.user.id);
 
   // Смена пароля выкидывает все прочие сессии — иначе чужой вход останется живым.
   const currentSid = req.sessionID;
