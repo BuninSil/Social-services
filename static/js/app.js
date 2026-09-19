@@ -122,7 +122,18 @@
     });
 
     var name = ui.fullName(S.user);
-    $$('.js_me_name').forEach(function (el) { el.textContent = name; });
+    $$('.js_me_name').forEach(function (el) {
+      if (!owner && viewer) {
+        // Загруженный в сеть сайт видит участника — значит, можно поздороваться.
+        var who = viewer.title || viewer.username;
+        el.innerHTML = (viewer.avatar_url ? '<img class="rc_ava" src="' + esc(viewer.avatar_url) + '" alt="">' : '') +
+          'Привет, ' + esc(who);
+        var link = viewer.profile_url || VO.rc.profileUrl(viewer.username);
+        if (link) { el.href = link; el.target = '_blank'; el.rel = 'noopener'; }
+        return;
+      }
+      el.textContent = name;
+    });
 
     var btn = $('#theme_btn');
     if (btn) {
@@ -141,7 +152,9 @@
     var box = $('#mode_line');
     if (!box) return;
     if (owner) {
-      box.innerHTML = 'режим: <b>моя страница</b> &middot; ' +
+      var byNetwork = viewer && String(viewer.username).toLowerCase() ===
+        String((S.owner && S.owner.rc_username) || '').toLowerCase();
+      box.innerHTML = 'режим: <b>моя страница</b>' + (byNetwork ? ' (узнала сеть)' : '') + ' &middot; ' +
         '<button type="button" class="link_btn" id="mode_off">только смотреть</button>';
       $('#mode_off').addEventListener('click', function () {
         store.setOwner(false);
@@ -350,6 +363,18 @@
 
   PAGES.index = function () {
     var u = S.user;
+
+    // Карточка проекта в профиле участника сети: цифры опубликованной страницы,
+    // а не черновиков в браузере — чужие видят именно её.
+    if (owner && VO.rc.available) {
+      var pub = store.published();
+      VO.rc.stats({
+        'Записей': pub.posts.length,
+        'Фотографий': pub.photos.length,
+        'Аудиозаписей': pub.audios.length,
+        'Групп': pub.groups.length,
+      });
+    }
     $('#profile_name').textContent = ui.fullName(u);
     $('#profile_state').textContent = owner ? 'это Вы' : '';
 
@@ -886,12 +911,12 @@
   PAGES.group = function () {
     var id = parseInt(param('id'), 10);
     var group = ui.byId(S.groups, id);
-    if (!group) { html($('#group_body'), '<div class="empty">Такой группы нет.</div>'); return; }
+    if (!group) { html($('#profile_right'), '<div class="empty">Такой группы нет.</div>'); return; }
     document.title = group.name + ' | ВОнлайне';
     $('#group_title').textContent = group.name;
 
     store.preload([group.avatar]).then(function () {
-      html($('#group_left'),
+      html($('#profile_left'),
         '<img class="pavatar" src="' + esc(ui.groupAvatar(group)) + '" width="200" alt="">' +
         (owner ? '<div class="profile_actions">' +
           '<a href="#" id="group_rename">Переименовать</a>' +
@@ -900,7 +925,7 @@
           '<a href="#" id="group_del">Удалить группу</a>' +
           '</div><input type="file" id="group_ava_file" accept="image/*" hidden>' : ''));
 
-      html($('#group_right'),
+      html($('#profile_right'),
         '<div class="pname">' + esc(group.name) + '</div>' +
         '<div class="pstatus">' + esc(group.description || '') + '</div>' +
         '<div class="block" id="group_form_box"></div>' +
@@ -971,14 +996,49 @@
     }
   };
 
-  /* --- друзья ------------------------------------------------------------ */
+  /* --- люди сети ---------------------------------------------------------- */
 
-  PAGES.friends = function () {
-    var box = $('#friends_body');
-    html(box,
-      '<div class="empty" style="padding:10px">Список друзей пуст: на этом сайте всего одна страница — моя.' +
-      '<div class="gray" style="padding-top:6px">Полная версия ВОнлайне с друзьями, личными сообщениями и живой лентой ' +
-      'работает в локальной сети — про это написано в <a href="help.html">помощи</a>.</div></div>');
+  PAGES.people = function () {
+    var box = $('#people_list');
+    if (!VO.rc.available) {
+      html(box, '<div class="empty">Список участников показывает сеть RetroCore. ' +
+        'Страница открыта не из сети, поэтому показывать нечего.</div>');
+      return;
+    }
+
+    $('#people_form').addEventListener('submit', function (e) { e.preventDefault(); draw(); });
+    $('#people_online').addEventListener('change', draw);
+    draw();
+
+    function draw() {
+      var params = {};
+      var q = $('#people_q').value.trim();
+      if (q) params.q = q;
+      if ($('#people_online').checked) params.online = true;
+      html(box, '<div class="empty">Спрашиваю у сети…</div>');
+
+      VO.rc.users(params).then(function (list) {
+        $('#people_count').textContent = list.length;
+        if (!list.length) {
+          html(box, '<div class="empty">Никого не нашлось.</div>');
+          return;
+        }
+        html(box, list.map(function (p) {
+          var name = esc(p.title || p.username || '');
+          var link = p.profile_url || VO.rc.profileUrl(p.username) || '#';
+          return '<div class="people_row">' +
+            '<div class="ava"><a href="' + esc(link) + '" rel="noopener" target="_blank">' +
+            '<img src="' + esc(p.avatar_url || ui.PLACEHOLDER.user) + '" width="60" height="60" alt=""></a></div>' +
+            '<div class="body"><div class="name">' +
+            '<a href="' + esc(link) + '" rel="noopener" target="_blank">' + name + '</a>' +
+            (p.status === 'online' ? ' <span class="online_dot" title="на сайте">&#9679;</span>' : '') +
+            '</div>' +
+            '<div class="info">' + esc(p.role_name || p.role || '') +
+            (p.status_msg ? ' &middot; ' + esc(p.status_msg) : '') + '</div>' +
+            '</div><div class="clear"></div></div>';
+        }).join(''));
+      });
+    }
   };
 
   /* --- поиск ------------------------------------------------------------- */
@@ -1062,6 +1122,9 @@
       $('#settings_avatar').src = ui.avatar(u);
     });
 
+    var ownerField = $('#owner_rc');
+    if (ownerField) ownerField.value = (S.owner && S.owner.rc_username) || '';
+
     $('#avatar_file').addEventListener('change', function (e) {
       var file = e.target.files[0];
       if (!file) return;
@@ -1094,6 +1157,10 @@
       $$('[data-field]', form).forEach(function (el) {
         u[el.dataset.field] = el.value.trim().slice(0, el.dataset.field === 'about' ? 2000 : 500);
       });
+      if (ownerField) {
+        S.owner = S.owner || {};
+        S.owner.rc_username = ownerField.value.trim().slice(0, 40);
+      }
       if (!u.first_name) u.first_name = 'Владислав';
       u.login = (u.login || 'me').replace(/[^a-z0-9_]/gi, '').toLowerCase() || 'me';
       save();
@@ -1244,11 +1311,25 @@
 
   /* ------------------------------------------------------------------ старт */
 
+  var viewer = null;   // кто открыл страницу, по данным сети
+
   function start() {
     store.load().then(function (loaded) {
       S = loaded;
       window.VO.state = S;
       owner = store.isOwner();
+      // Сеть говорит, кто смотрит. Если это хозяин страницы — правка включается сама.
+      return VO.rc.user().then(function (who) {
+        viewer = who;
+        var ownerName = String((S.owner && S.owner.rc_username) || '').toLowerCase();
+        if (!owner && who && ownerName && String(who.username).toLowerCase() === ownerName) {
+          store.setOwner(true);
+          S = store.get();
+          window.VO.state = S;
+          owner = true;
+        }
+      });
+    }).then(function () {
       if (!owner) {
         try {
           var guestTheme = localStorage.getItem('vo.theme');

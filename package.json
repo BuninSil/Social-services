@@ -10,7 +10,8 @@
     "dev": "node --watch src/server.js",
     "seed": "node scripts/seed.js",
     "reset": "node scripts/reset.js",
-    "mock:retrocore": "node scripts/retrocore-mock.js"
+    "mock:retrocore": "node scripts/retrocore-mock.js",
+    "static": "node static/build.js"
   },
   "dependencies": {
     "better-sqlite3": "^12.6.0",
