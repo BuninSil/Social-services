@@ -16,3 +16,4 @@ npm-debug.log*
 # Сборка статической версии: делается командой npm run static
 dist/
 vonline-site.zip
+vonline-server.zip
