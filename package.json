@@ -1,7 +1,7 @@
 {
   "name": "vonline",
   "version": "1.0.0",
-  "description": "ВОнлайне — социальная сеть для локальной сети. Дизайн и функционал в духе 2010 года.",
+  "description": "ВОнлайне — социальная сеть в духе 2010 года. Node + файловая база, без SQL и нативных модулей.",
   "private": true,
   "type": "commonjs",
   "main": "src/server.js",
@@ -11,18 +11,20 @@
     "seed": "node scripts/seed.js",
     "reset": "node scripts/reset.js",
     "mock:retrocore": "node scripts/retrocore-mock.js",
-    "static": "node static/build.js"
+    "static": "node static/build.js",
+    "account": "node scripts/account.js"
   },
   "dependencies": {
-    "better-sqlite3": "^12.6.0",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
     "express-session": "^1.18.2",
     "multer": "^2.0.2",
-    "sharp": "^0.35.4",
     "ws": "^8.19.0"
   },
   "engines": {
     "node": ">=20"
+  },
+  "optionalDependencies": {
+    "sharp": "^0.35.4"
   }
 }

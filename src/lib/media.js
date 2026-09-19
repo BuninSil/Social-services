@@ -5,7 +5,17 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 const multer = require('multer');
-const sharp = require('sharp');
+/**
+ * sharp — единственный модуль с бинарником. На простом хостинге он иногда
+ * не ставится, поэтому он необязательный: без него картинки сохраняются
+ * как есть, только без уменьшения и без отдельной миниатюры.
+ */
+let sharp = null;
+try {
+  sharp = require('sharp');
+} catch (e) {
+  console.warn('[медиа] sharp не установлен: картинки будут сохраняться без уменьшения');
+}
 
 const UPLOAD_DIR = process.env.VO_UPLOAD_DIR || path.join(__dirname, '..', '..', 'uploads');
 const SUBDIRS = ['photos', 'avatars', 'audio', 'video', 'docs', 'voice'];
@@ -104,6 +114,8 @@ async function saveImage(buffer, sub, opts) {
   const name = randomName('.jpg');
   const dir = path.join(UPLOAD_DIR, sub);
 
+  if (!sharp) return saveImageAsIs(buffer, sub, name, dir);
+
   const info = await sharp(buffer)
     .rotate()
     .resize({ width: options.width, height: options.width, fit: 'inside', withoutEnlargement: true })
@@ -127,6 +139,20 @@ async function saveImage(buffer, sub, opts) {
     width: info.width,
     height: info.height,
     size: info.size,
+  };
+}
+
+/** Без sharp кладём исходник и его же выдаём за миниатюру. */
+function saveImageAsIs(buffer, sub, name, dir) {
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, name), buffer);
+  fs.writeFileSync(path.join(dir, 'thumb_' + name), buffer);
+  return {
+    file: sub + '/' + name,
+    thumb: sub + '/thumb_' + name,
+    width: 0,
+    height: 0,
+    size: buffer.length,
   };
 }
 

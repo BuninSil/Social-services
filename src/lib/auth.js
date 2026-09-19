@@ -22,8 +22,7 @@ function verifyPassword(password, stored) {
   return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
 }
 
-const selectUser = db.prepare('SELECT * FROM users WHERE id = ?');
-const touchUser = db.prepare('UPDATE users SET last_seen = ? WHERE id = ?');
+
 
 /** Подмешивает текущего пользователя, счётчики и csrf-токен в каждый запрос. */
 function loadUser(req, res, next) {
@@ -32,16 +31,15 @@ function loadUser(req, res, next) {
   // Токен нужен и до входа: у форм входа и регистрации он тоже должен быть.
   res.locals.csrf = csrfToken(req);
   if (req.session && req.session.userId) {
-    const user = selectUser.get(req.session.userId);
+    const user = db.users.get(req.session.userId);
     if (user) {
-      touchUser.run(Math.floor(Date.now() / 1000), user.id);
+      db.users.update(user.id, { last_seen: Math.floor(Date.now() / 1000) });
       req.user = user;
       res.locals.me = user;
       res.locals.counters = {
         messages: models.unreadDialogs(user.id),
-        requests: db.prepare("SELECT COUNT(*) n FROM friendships WHERE to_id = ? AND status = 'pending'")
-          .get(user.id).n,
-        notifications: models.notifQ.unread.get(user.id).n,
+        requests: db.friendships.count({ to_id: user.id, status: 'pending' }),
+        notifications: models.unreadNotifications(user.id),
       };
     } else {
       req.session.destroy(() => {});

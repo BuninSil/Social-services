@@ -18,31 +18,31 @@ const sendLimit = rateLimit('message', 60000, 60, 'Слишком много с�
 
 /** Беседа, в которой состоит текущий пользователь, либо null. */
 function myConversation(req, convId) {
-  const conv = M.convQ.byId.get(convId);
+  const conv = M.db.conversations.get(convId);
   if (!conv || !M.isConvMember(conv.id, req.user.id)) return null;
   return conv;
 }
 
 /** Собеседники, которым нужно разослать событие. */
 const otherMembers = (convId, meId) =>
-  M.convQ.memberIds.all(convId).map((r) => r.user_id).filter((id) => id !== meId);
+  M.convMemberIds(convId).filter((id) => id !== meId);
 
 function renderChat(req, res, conv) {
   const view = M.convView(conv, req.user.id);
   const messages = M.history(conv.id, PER_PAGE, 0);
   const lastId = messages.length ? messages[messages.length - 1].id : 0;
-  if (lastId) M.convQ.setRead.run(lastId, conv.id, req.user.id);
+  if (lastId) M.setRead(conv.id, req.user.id, lastId);
 
   res.render('im_chat', {
     conv: view,
     messages,
-    members: conv.kind === 'chat' ? M.convQ.members.all(conv.id) : [],
+    members: conv.kind === 'chat' ? M.convMembers(conv.id) : [],
     invitable: conv.kind === 'chat'
       ? M.friendList(req.user.id).filter((f) => !M.isConvMember(conv.id, f.id))
       : [],
     peer: view.peer,
     canWrite: conv.kind !== 'dm' || (view.peer && M.canMessage(req.user.id, M.getUser(view.peer.id))),
-    isAdmin: (M.convQ.member.get(conv.id, req.user.id) || {}).role === 'admin',
+    isAdmin: (M.convMember(conv.id, req.user.id) || {}).role === 'admin',
     error: req.query.err ? String(req.query.err).slice(0, 300) : null,
   });
 }
@@ -56,12 +56,12 @@ router.get('/im', requireAuth, (req, res) => {
 /** Поиск по своим перепискам. */
 router.get('/im/search', requireAuth, (req, res) => {
   const q = String(req.query.q || '').trim();
-  const rows = q ? M.convQ.searchMessages.all(req.user.id, '%' + q + '%', 60) : [];
+  const rows = q ? M.searchMessages(req.user.id, q, 60) : [];
   res.render('im_search', {
     q,
     results: rows.map((m) => ({
       message: M.decorateMessage(m),
-      conv: M.convView(M.convQ.byId.get(m.conv_id), req.user.id),
+      conv: M.convView(M.db.conversations.get(m.conv_id), req.user.id),
     })),
   });
 });
@@ -143,9 +143,9 @@ router.post(/^\/im\/c(\d+)$/, requireAuth, sendLimit,
       return res.redirect('/im/c' + conv.id + (errors.length ? '?err=' + encodeURIComponent(errors.join(' ')) : ''));
     }
 
-    const messageId = M.convQ.send.run(conv.id, req.user.id, text, now()).lastInsertRowid;
+    const messageId = M.sendMessage(conv.id, req.user.id, text).id;
     M.saveAttachments('message', messageId, items);
-    M.convQ.setRead.run(messageId, conv.id, req.user.id);
+    M.setRead(conv.id, req.user.id, messageId);
 
     broadcastMessage(conv, messageId, req.user);
 
@@ -170,9 +170,9 @@ router.post(/^\/im\/c(\d+)\/voice$/, requireAuth, sendLimit,
     const saved = media.saveVoice(req.file.buffer, { ext: type.ext });
     const duration = saved.duration || Math.min(600, Math.max(0, parseInt(req.body.duration, 10) || 0));
 
-    const messageId = M.convQ.send.run(conv.id, req.user.id, '', now()).lastInsertRowid;
+    const messageId = M.sendMessage(conv.id, req.user.id, '').id;
     M.saveAttachments('message', messageId, [{ kind: 'voice', file: saved.file, meta: { duration } }]);
-    M.convQ.setRead.run(messageId, conv.id, req.user.id);
+    M.setRead(conv.id, req.user.id, messageId);
 
     broadcastMessage(conv, messageId, req.user);
     res.json({ ok: true, id: messageId });
@@ -180,7 +180,7 @@ router.post(/^\/im\/c(\d+)\/voice$/, requireAuth, sendLimit,
 
 /** Разослать новое сообщение остальным участникам беседы. */
 function broadcastMessage(conv, messageId, author) {
-  const message = M.decorateMessage(M.convQ.message.get(messageId));
+  const message = M.decorateMessage(M.getMessage(messageId));
   const recipients = otherMembers(conv.id, author.id);
   const title = conv.kind === 'chat' ? conv.title : fullName(author);
 
@@ -208,8 +208,8 @@ router.post(/^\/im\/c(\d+)\/read$/, requireAuth, express.json(), (req, res) => {
   const conv = myConversation(req, Number(req.params[0]));
   if (!conv) return res.status(404).json({ error: 'not found' });
 
-  const last = M.convQ.lastMessage.get(conv.id);
-  if (last) M.convQ.setRead.run(last.id, conv.id, req.user.id);
+  const last = M.lastMessage(conv.id);
+  if (last) M.setRead(conv.id, req.user.id, last.id);
   ws.sendMany(otherMembers(conv.id, req.user.id),
     { kind: 'read', conv_id: conv.id, user_id: req.user.id, up_to: last ? last.id : 0 });
 
@@ -224,7 +224,7 @@ router.post(/^\/im\/c(\d+)\/invite$/, requireAuth, (req, res, next) => {
 
   const id = parseInt(req.body.user_id, 10);
   if (id && M.areFriends(req.user.id, id) && !M.blockedEither(req.user.id, id)) {
-    M.convQ.addMember.run(conv.id, id, 'member', now());
+    M.addConvMember(conv.id, id, 'member');
     notify.push({
       userId: id, kind: 'chat_invite', actorId: req.user.id,
       targetType: 'conv', targetId: conv.id, url: '/im/c' + conv.id, preview: conv.title,
@@ -236,17 +236,17 @@ router.post(/^\/im\/c(\d+)\/invite$/, requireAuth, (req, res, next) => {
 router.post(/^\/im\/c(\d+)\/leave$/, requireAuth, (req, res, next) => {
   const conv = myConversation(req, Number(req.params[0]));
   if (!conv || conv.kind !== 'chat') return next();
-  M.convQ.dropMember.run(conv.id, req.user.id);
+  M.dropConvMember(conv.id, req.user.id);
   res.redirect('/im');
 });
 
 router.post(/^\/im\/c(\d+)\/title$/, requireAuth, (req, res, next) => {
   const conv = myConversation(req, Number(req.params[0]));
   if (!conv || conv.kind !== 'chat') return next();
-  const member = M.convQ.member.get(conv.id, req.user.id);
+  const member = M.convMember(conv.id, req.user.id);
   const title = trim(req.body.title, 80);
   if (member && member.role === 'admin' && title) {
-    M.db.prepare('UPDATE conversations SET title = ? WHERE id = ?').run(title, conv.id);
+    M.db.conversations.update(conv.id, { title: title });
   }
   res.redirect('/im/c' + conv.id);
 });
@@ -254,12 +254,12 @@ router.post(/^\/im\/c(\d+)\/title$/, requireAuth, (req, res, next) => {
 /* ------------------------------------------------- правка и удаление сообщений */
 
 router.post(/^\/message\/(\d+)\/edit$/, requireAuth, (req, res) => {
-  const message = M.convQ.message.get(Number(req.params[0]));
+  const message = M.getMessage(Number(req.params[0]));
   const back = backTo(req, '/im');
   if (message && message.from_id === req.user.id && !message.deleted_at) {
     const text = trim(req.body.text, 4000);
     if (text) {
-      M.convQ.editMessage.run(text, now(), message.id);
+      M.editMessage(message.id, text);
       ws.sendMany(otherMembers(message.conv_id, req.user.id),
         { kind: 'message_edited', conv_id: message.conv_id, id: message.id, html: text2html(text) });
     }
@@ -268,10 +268,10 @@ router.post(/^\/message\/(\d+)\/edit$/, requireAuth, (req, res) => {
 });
 
 router.post(/^\/message\/(\d+)\/delete$/, requireAuth, (req, res) => {
-  const message = M.convQ.message.get(Number(req.params[0]));
+  const message = M.getMessage(Number(req.params[0]));
   const back = backTo(req, '/im');
   if (message && message.from_id === req.user.id) {
-    M.convQ.deleteMessage.run(now(), message.id);
+    M.deleteMessage(message.id);
     ws.sendMany(otherMembers(message.conv_id, req.user.id),
       { kind: 'message_deleted', conv_id: message.conv_id, id: message.id });
   }
@@ -283,7 +283,7 @@ router.post(/^\/message\/(\d+)\/delete$/, requireAuth, (req, res) => {
 ws.on('typing', (userId, data) => {
   const convId = parseInt(data.conv_id, 10);
   if (!convId || !M.isConvMember(convId, userId)) return;
-  const user = M.users.brief.get(userId);
+  const user = M.brief(userId);
   if (!user) return;
   ws.sendMany(otherMembers(convId, userId),
     { kind: 'typing', conv_id: convId, user_id: userId, name: user.first_name });

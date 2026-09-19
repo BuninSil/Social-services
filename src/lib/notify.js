@@ -37,13 +37,13 @@ function push(opts) {
   const saved = M.notify(opts);
   if (!saved) return null;
 
-  const actor = opts.actorId ? M.users.brief.get(opts.actorId) : null;
+  const actor = opts.actorId ? M.brief(opts.actorId) : null;
   ws.send(opts.userId, {
     kind: 'notification',
     id: saved.id,
     url: opts.url || '',
     text: (actor ? fullName(actor) + ' ' : '') + phrase(opts.kind, actor),
-    count: M.notifQ.unread.get(opts.userId).n,
+    count: M.unreadNotifications(opts.userId),
   });
   return saved;
 }
@@ -52,7 +52,7 @@ function push(opts) {
 function pushMentions(text, actorId, url, preview) {
   const logins = require('./util').extractMentions(text);
   for (const login of logins.slice(0, 10)) {
-    const user = M.users.byLogin.get(login);
+    const user = M.userByLogin(login);
     if (user && user.id !== actorId) {
       push({
         userId: user.id,

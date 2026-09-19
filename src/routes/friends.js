@@ -17,8 +17,8 @@ function renderFriends(req, res, owner, tab) {
     owner,
     tab,
     friends: M.friendList(owner.id),
-    incoming: isMe ? M.friendsQ.incoming.all(req.user.id) : [],
-    outgoing: isMe ? M.friendsQ.outgoing.all(req.user.id) : [],
+    incoming: isMe ? M.incomingRequests(req.user.id) : [],
+    outgoing: isMe ? M.outgoingRequests(req.user.id) : [],
   });
 }
 
@@ -83,7 +83,7 @@ router.post(/^\/unblock\/(\d+)$/, requireAuth, (req, res, next) => {
 });
 
 router.get('/settings/blacklist', requireAuth, (req, res) => {
-  res.render('blacklist', { blocked: M.blocksQ.list.all(req.user.id) });
+  res.render('blacklist', { blocked: M.blockList(req.user.id) });
 });
 
 module.exports = router;

@@ -14,6 +14,9 @@
 
 const crypto = require('crypto');
 
+/** Тумблер: без него сайт живёт сам по себе, о сети даже не вспоминает. */
+const ENABLED = /^(1|true|yes|on|да)$/i.test(String(process.env.RC_ENABLED || '').trim());
+
 const BASE = String(process.env.RC_BASE || 'http://88.87.70.78:8080').replace(/\/+$/, '');
 const CLIENT_ID = String(process.env.RC_CLIENT_ID || '').trim();
 const CLIENT_SECRET = String(process.env.RC_CLIENT_SECRET || '').trim();
@@ -21,7 +24,19 @@ const REDIRECT_URI = String(process.env.RC_REDIRECT_URI || '').trim();
 const TIMEOUT = 10000;
 
 function configured() {
-  return !!(CLIENT_ID && CLIENT_SECRET && REDIRECT_URI);
+  return ENABLED && !!(CLIENT_ID && CLIENT_SECRET && REDIRECT_URI);
+}
+
+/** Что написать в консоль при запуске: включено, недонастроено или выключено. */
+function status() {
+  if (!ENABLED) return { on: false, text: 'вход через RetroCore выключен (RC_ENABLED=0)' };
+  if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
+    return {
+      on: false,
+      text: 'RC_ENABLED=1, но не хватает RC_CLIENT_ID / RC_CLIENT_SECRET / RC_REDIRECT_URI — кнопки не будет',
+    };
+  }
+  return { on: true, text: 'вход через RetroCore включён: ' + BASE };
 }
 
 /** Куда отправить человека, чтобы сеть его узнала. */
@@ -108,4 +123,4 @@ function absolute(value) {
   return url.href;
 }
 
-module.exports = { BASE, CLIENT_ID, configured, authorizeUrl, newState, exchange };
+module.exports = { BASE, CLIENT_ID, ENABLED, configured, status, authorizeUrl, newState, exchange };

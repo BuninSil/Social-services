@@ -4,18 +4,10 @@ const session = require('express-session');
 const db = require('../db');
 
 const Store = session.Store;
+const seconds = () => Math.floor(Date.now() / 1000);
 
-const q = {
-  get: db.prepare('SELECT data, expires FROM sessions WHERE sid = ?'),
-  set: db.prepare('INSERT INTO sessions (sid, data, expires) VALUES (?, ?, ?) ' +
-    'ON CONFLICT(sid) DO UPDATE SET data = excluded.data, expires = excluded.expires'),
-  del: db.prepare('DELETE FROM sessions WHERE sid = ?'),
-  clean: db.prepare('DELETE FROM sessions WHERE expires < ?'),
-  count: db.prepare('SELECT COUNT(*) n FROM sessions'),
-};
-
-/** Хранилище сессий в той же SQLite — чтобы логин переживал перезапуск. */
-class SqliteStore extends Store {
+/** Сессии лежат в той же файловой базе — чтобы вход переживал перезапуск. */
+class FileStore extends Store {
   constructor() {
     super();
     this.cleanup();
@@ -24,15 +16,15 @@ class SqliteStore extends Store {
   }
 
   cleanup() {
-    q.clean.run(Math.floor(Date.now() / 1000));
+    db.sessions.remove((row) => row.expires < seconds());
   }
 
   get(sid, cb) {
     try {
-      const row = q.get.get(sid);
+      const row = db.sessions.get(sid);
       if (!row) return cb(null, null);
-      if (row.expires < Math.floor(Date.now() / 1000)) {
-        q.del.run(sid);
+      if (row.expires < seconds()) {
+        db.sessions.remove(sid);
         return cb(null, null);
       }
       cb(null, JSON.parse(row.data));
@@ -44,8 +36,10 @@ class SqliteStore extends Store {
   set(sid, sess, cb) {
     try {
       const maxAge = sess.cookie && sess.cookie.maxAge ? sess.cookie.maxAge : 30 * 86400 * 1000;
-      const expires = Math.floor((Date.now() + maxAge) / 1000);
-      q.set.run(sid, JSON.stringify(sess), expires);
+      db.sessions.upsert({ id: sid }, {
+        data: JSON.stringify(sess),
+        expires: Math.floor((Date.now() + maxAge) / 1000),
+      });
       cb(null);
     } catch (err) {
       cb(err);
@@ -58,7 +52,7 @@ class SqliteStore extends Store {
 
   destroy(sid, cb) {
     try {
-      q.del.run(sid);
+      db.sessions.remove(sid);
       cb(null);
     } catch (err) {
       cb(err);
@@ -66,8 +60,8 @@ class SqliteStore extends Store {
   }
 
   length(cb) {
-    cb(null, q.count.get().n);
+    cb(null, db.sessions.count());
   }
 }
 
-module.exports = SqliteStore;
+module.exports = FileStore;

@@ -12,10 +12,10 @@ const { uploadThen, rateLimit, backTo } = require('../lib/security');
 const router = express.Router();
 const uploadLimit = rateLimit('upload', 3600000, 200, 'Слишком много загрузок за час. Подождите.');
 
-const listOf = db.prepare('SELECT * FROM audios WHERE owner_id = ? ORDER BY id DESC');
+const listOf = (ownerId) => db.audios.filter({ owner_id: ownerId }).sort((a, b) => b.id - a.id);
 
 function render(req, res, owner, error) {
-  res.render('audio', { owner, audios: listOf.all(owner.id), error: error || null });
+  res.render('audio', { owner, audios: listOf(owner.id), error: error || null });
 }
 
 router.get('/audio', requireAuth, (req, res) => render(req, res, req.user));
@@ -45,20 +45,25 @@ router.post('/audio/upload', requireAuth, uploadLimit,
     const name = attach.cleanName(req.file.originalname);
     const track = attach.splitTrackName(name);
 
-    db.prepare(`
-      INSERT INTO audios (owner_id, artist, title, file, duration, size, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(req.user.id, trim(req.body.artist, 80) || track.artist,
-      trim(req.body.title, 80) || track.title, saved.file, saved.duration, saved.size, now());
+    db.audios.insert({
+      owner_id: req.user.id,
+      artist: trim(req.body.artist, 80) || track.artist,
+      title: trim(req.body.title, 80) || track.title,
+      file: saved.file,
+      duration: saved.duration,
+      size: saved.size,
+      created_at: now(),
+    });
 
     res.redirect('/audio');
   });
 
 router.post(/^\/audio\/(\d+)\/delete$/, requireAuth, (req, res) => {
-  const audio = M.audiosQ.byId.get(Number(req.params[0]));
+  const audio = M.db.audios.get(Number(req.params[0]));
   if (audio && audio.owner_id === req.user.id) {
     media.removeFile(audio.file);
-    db.prepare("DELETE FROM attachments WHERE kind = 'audio' AND ref_id = ?").run(audio.id);
-    db.prepare('DELETE FROM audios WHERE id = ?').run(audio.id);
+    db.attachments.remove((a) => (a.kind === 'audio' || a.kind === 'voice') && a.ref_id === audio.id);
+    db.audios.remove(audio.id);
   }
   res.redirect(backTo(req, '/audio'));
 });

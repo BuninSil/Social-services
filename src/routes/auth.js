@@ -2,6 +2,7 @@
 
 const express = require('express');
 const db = require('../db');
+const M = require('../lib/models');
 const { hashPassword, verifyPassword } = require('../lib/auth');
 const { now, trim } = require('../lib/util');
 const { loginGuard, rateLimit, safePath } = require('../lib/security');
@@ -52,7 +53,7 @@ router.post('/login', (req, res) => {
     });
   }
 
-  const user = db.prepare('SELECT * FROM users WHERE login = ? COLLATE NOCASE').get(login);
+  const user = M.userByLogin(login);
   const ok = user ? verifyPassword(password, user.password_hash) : verifyPassword(password, DUMMY_HASH) && false;
 
   if (!ok) {
@@ -94,21 +95,28 @@ router.post('/register', registerLimit, (req, res) => {
   const problem = passwordProblem(password);
   if (problem) return fail(problem);
   if (password !== String(req.body.password2 || '')) return fail('Пароли не совпадают.');
-  if (db.prepare('SELECT 1 x FROM users WHERE login = ? COLLATE NOCASE').get(form.login)) {
+  if (M.userByLogin(form.login)) {
     return fail('Такой логин уже занят.');
   }
 
-  const info = db.prepare(`
-    INSERT INTO users (login, password_hash, first_name, last_name, sex, created_at, last_seen)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(form.login, hashPassword(password), form.first_name, form.last_name, form.sex, now(), now());
+  const user = db.users.insert({
+    login: form.login,
+    password_hash: hashPassword(password),
+    first_name: form.first_name,
+    last_name: form.last_name,
+    sex: form.sex,
+    created_at: now(),
+    last_seen: now(),
+  });
 
-  db.prepare("INSERT INTO albums (owner_type, owner_id, title, created_at) VALUES ('user', ?, ?, ?)")
-    .run(info.lastInsertRowid, 'Фотографии со страницы', now());
+  db.albums.insert({
+    owner_type: 'user', owner_id: user.id, title: 'Фотографии со страницы', created_at: now(),
+  });
+  db.save();
 
   req.session.regenerate((err) => {
     if (err) return fail('Не удалось создать страницу, попробуйте ещё раз.');
-    req.session.userId = info.lastInsertRowid;
+    req.session.userId = user.id;
     res.redirect('/settings');
   });
 });

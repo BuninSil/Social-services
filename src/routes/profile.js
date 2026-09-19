@@ -13,11 +13,11 @@ const PER_PAGE = 20;
 const postLimit = rateLimit('post', 60000, 20, 'Слишком много записей подряд. Подождите минуту.');
 
 const counts = {
-  photos: db.prepare('SELECT COUNT(*) n FROM photos WHERE owner_id = ?'),
-  videos: db.prepare('SELECT COUNT(*) n FROM videos WHERE owner_id = ?'),
-  audios: db.prepare('SELECT COUNT(*) n FROM audios WHERE owner_id = ?'),
-  docs: db.prepare('SELECT COUNT(*) n FROM docs WHERE owner_id = ?'),
-  groups: db.prepare('SELECT COUNT(*) n FROM group_members WHERE user_id = ?'),
+  photos: (id) => db.photos.count({ owner_id: id }),
+  videos: (id) => db.videos.count({ owner_id: id }),
+  audios: (id) => db.audios.count({ owner_id: id }),
+  docs: (id) => db.docs.count({ owner_id: id }),
+  groups: (id) => db.group_members.count({ user_id: id }),
 };
 
 router.get(/^\/id(\d+)$/, requireAuth, (req, res, next) => {
@@ -59,13 +59,13 @@ router.get(/^\/id(\d+)$/, requireAuth, (req, res, next) => {
     showPhotos,
     mutual: user.id === me.id ? [] : M.mutualFriends(me.id, user.id),
     photos: showPhotos
-      ? db.prepare('SELECT * FROM photos WHERE owner_id = ? ORDER BY id DESC LIMIT 6').all(user.id)
+      ? db.photos.filter({ owner_id: user.id }).sort((a, b) => b.id - a.id).slice(0, 6)
       : [],
-    photosCount: showPhotos ? counts.photos.get(user.id).n : 0,
-    videosCount: counts.videos.get(user.id).n,
-    audioCount: M.canSee(me.id, user, 'audio') ? counts.audios.get(user.id).n : 0,
-    docsCount: user.id === me.id ? counts.docs.get(user.id).n : 0,
-    groupsCount: counts.groups.get(user.id).n,
+    photosCount: showPhotos ? counts.photos(user.id) : 0,
+    videosCount: counts.videos(user.id),
+    audioCount: M.canSee(me.id, user, 'audio') ? counts.audios(user.id) : 0,
+    docsCount: user.id === me.id ? counts.docs(user.id) : 0,
+    groupsCount: counts.groups(user.id),
     posts: M.wallPosts('user', user.id, me.id, PER_PAGE, (page - 1) * PER_PAGE),
     wallCount: total,
     canPost: M.canPostOnWall(user, me.id),

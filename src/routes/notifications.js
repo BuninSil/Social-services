@@ -12,7 +12,7 @@ const PER_PAGE = 40;
 /** «Ответы» — всё, что случилось с Вашими записями, фотографиями и заявками. */
 router.get('/notifications', requireAuth, (req, res) => {
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-  const rows = M.notifQ.list.all(req.user.id, PER_PAGE + 1, (page - 1) * PER_PAGE);
+  const rows = M.listNotifications(req.user.id, PER_PAGE + 1, (page - 1) * PER_PAGE);
   const hasMore = rows.length > PER_PAGE;
 
   res.render('notifications', {
@@ -26,11 +26,11 @@ router.get('/notifications', requireAuth, (req, res) => {
   });
 
   // Открыли страницу — значит, прочитали.
-  M.notifQ.markAll.run(req.user.id);
+  M.markNotificationsRead(req.user.id);
 });
 
 router.post('/notifications/read', requireAuth, (req, res) => {
-  M.notifQ.markAll.run(req.user.id);
+  M.markNotificationsRead(req.user.id);
   res.redirect(backTo(req, '/notifications'));
 });
 

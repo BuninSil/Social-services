@@ -11,12 +11,12 @@ const { uploadThen, rateLimit, backTo } = require('../lib/security');
 const router = express.Router();
 const uploadLimit = rateLimit('upload', 3600000, 200, 'Слишком много загрузок за час. Подождите.');
 
-const listOf = db.prepare('SELECT * FROM videos WHERE owner_id = ? ORDER BY id DESC');
+const listOf = (ownerId) => db.videos.filter({ owner_id: ownerId }).sort((a, b) => b.id - a.id);
 
 function renderList(req, res, owner, error) {
   res.render('video', {
     owner,
-    videos: listOf.all(owner.id),
+    videos: listOf(owner.id),
     error: error || null,
     ffmpeg: media.ffmpegAvailable(),
   });
@@ -46,18 +46,23 @@ router.post('/video/upload', requireAuth, uploadLimit,
     }
 
     const saved = await media.saveVideo(req.file.buffer, type);
-    db.prepare(`
-      INSERT INTO videos (owner_id, title, description, file, poster, duration, size, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(req.user.id, trim(req.body.title, 120) || 'Видеозапись', trim(req.body.description, 1000),
-      saved.file, saved.poster, saved.duration, saved.size, now());
+    db.videos.insert({
+      owner_id: req.user.id,
+      title: trim(req.body.title, 120) || 'Видеозапись',
+      description: trim(req.body.description, 1000),
+      file: saved.file,
+      poster: saved.poster,
+      duration: saved.duration,
+      size: saved.size,
+      created_at: now(),
+    });
 
     res.redirect('/video');
   });
 
 router.get(/^\/video(\d+)_(\d+)$/, requireAuth, (req, res, next) => {
   const owner = M.getUser(Number(req.params[0]));
-  const video = M.videosQ.byId.get(Number(req.params[1]));
+  const video = M.db.videos.get(Number(req.params[1]));
   if (!owner || !video || video.owner_id !== owner.id) return next();
   if (!M.canSee(req.user.id, owner, 'profile')) {
     return res.status(403).render('error', { code: 403, message: 'Запись доступна только друзьям.' });
@@ -65,20 +70,20 @@ router.get(/^\/video(\d+)_(\d+)$/, requireAuth, (req, res, next) => {
   res.render('video_one', {
     owner,
     video,
-    comments: M.commentsQ.list.all('video', video.id),
+    comments: M.listComments('video', video.id),
   });
 });
 
 router.post(/^\/video\/(\d+)\/delete$/, requireAuth, (req, res) => {
-  const video = M.videosQ.byId.get(Number(req.params[0]));
+  const video = M.db.videos.get(Number(req.params[0]));
   if (video && video.owner_id === req.user.id) {
     media.removeFile(video.file);
     if (video.poster) {
       media.removeFile(video.poster);
       media.removeFile(video.poster.replace('thumb_', ''));
     }
-    db.prepare("DELETE FROM attachments WHERE kind = 'video' AND ref_id = ?").run(video.id);
-    db.prepare('DELETE FROM videos WHERE id = ?').run(video.id);
+    db.attachments.remove({ kind: 'video', ref_id: video.id });
+    db.videos.remove(video.id);
   }
   res.redirect(backTo(req, '/video'));
 });

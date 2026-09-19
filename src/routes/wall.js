@@ -20,28 +20,28 @@ const commentLimit = rateLimit('comment', 60000, 30, 'Слишком много 
 /** Владелец объекта, на который вешают лайк или комментарий. */
 function targetOwner(type, id) {
   if (type === 'post') {
-    const post = M.postsQ.byId.get(id);
+    const post = M.db.posts.get(id);
     return post ? { ownerId: post.author_id, post } : null;
   }
   if (type === 'video') {
-    const video = M.videosQ.byId.get(id);
+    const video = M.db.videos.get(id);
     return video ? { ownerId: video.owner_id, video } : null;
   }
-  const photo = M.photosQ.byId.get(id);
+  const photo = M.db.photos.get(id);
   return photo ? { ownerId: photo.owner_id, photo } : null;
 }
 
 /** Ссылка на объект — для уведомлений. */
 function targetUrl(type, id) {
   if (type === 'photo') {
-    const photo = M.photosQ.byId.get(id);
+    const photo = M.db.photos.get(id);
     return photo ? '/photo' + photo.owner_id + '_' + photo.id : '/';
   }
   if (type === 'video') {
-    const video = M.videosQ.byId.get(id);
+    const video = M.db.videos.get(id);
     return video ? '/video' + video.owner_id + '_' + video.id : '/';
   }
-  const post = M.postsQ.byId.get(id);
+  const post = M.db.posts.get(id);
   if (!post) return '/';
   return (post.owner_type === 'group' ? '/club' : '/id') + post.owner_id + '#post' + post.id;
 }
@@ -78,7 +78,7 @@ router.get(/^\/likes\/(post|photo|video)\/(\d+)$/, requireAuth, (req, res) => {
   const type = req.params[0];
   const id = Number(req.params[1]);
   res.render('likes', {
-    users: M.likesQ.users.all(type, id),
+    users: M.likeUsers(type, id),
     back: backTo(req, '/feed'),
   });
 });
@@ -99,9 +99,9 @@ router.post('/comment', requireAuth, commentLimit, (req, res) => {
   }
 
   const replyTo = parseInt(req.body.reply_to, 10) || null;
-  const parent = replyTo ? M.commentsQ.byId.get(replyTo) : null;
-  const commentId = M.commentsQ.insert.run(type, id, req.user.id, text,
-    parent && parent.target_id === id ? parent.id : null, now()).lastInsertRowid;
+  const parent = replyTo ? M.db.comments.get(replyTo) : null;
+  const commentId = M.addComment(type, id, req.user.id, text,
+    parent && parent.target_id === id ? parent.id : null).id;
 
   const url = targetUrl(type, id);
   notify.push({
@@ -130,37 +130,37 @@ router.post('/comment', requireAuth, commentLimit, (req, res) => {
 });
 
 router.post(/^\/comment\/(\d+)\/edit$/, requireAuth, (req, res) => {
-  const comment = M.commentsQ.byId.get(Number(req.params[0]));
+  const comment = M.db.comments.get(Number(req.params[0]));
   const back = backTo(req, '/feed');
   if (comment && comment.author_id === req.user.id) {
     const text = trim(req.body.text, 2000);
-    if (text) M.commentsQ.update.run(text, now(), comment.id);
+    if (text) M.editComment(comment.id, text);
   }
   res.redirect(back);
 });
 
 router.post(/^\/comment\/(\d+)\/delete$/, requireAuth, (req, res) => {
-  const comment = M.commentsQ.byId.get(Number(req.params[0]));
+  const comment = M.db.comments.get(Number(req.params[0]));
   const back = backTo(req, '/feed');
   if (!comment) return res.redirect(back);
 
   let allowed = comment.author_id === req.user.id;
   if (!allowed && comment.target_type === 'post') {
-    const post = M.postsQ.byId.get(comment.target_id);
+    const post = M.db.posts.get(comment.target_id);
     allowed = !!post && publish.canEditPost(post, req.user);
   }
   if (!allowed && comment.target_type === 'photo') {
-    const photo = M.photosQ.byId.get(comment.target_id);
+    const photo = M.db.photos.get(comment.target_id);
     allowed = !!photo && photo.owner_id === req.user.id;
   }
-  if (allowed) M.commentsQ.del.run(comment.id);
+  if (allowed) M.deleteComment(comment.id);
   res.redirect(back);
 });
 
 /* ---------------------------------------------------------------- записи */
 
 router.get(/^\/post\/(\d+)$/, requireAuth, (req, res, next) => {
-  const post = M.postsQ.byId.get(Number(req.params[0]));
+  const post = M.db.posts.get(Number(req.params[0]));
   if (!post) return next();
   if (post.owner_type === 'user' && !M.canSee(req.user.id, M.getUser(post.owner_id), 'profile')) {
     return res.status(403).render('error', { code: 403, message: 'Эта запись недоступна.' });
@@ -172,7 +172,7 @@ router.get(/^\/post\/(\d+)$/, requireAuth, (req, res, next) => {
 });
 
 router.get(/^\/post\/(\d+)\/edit$/, requireAuth, (req, res, next) => {
-  const post = M.postsQ.byId.get(Number(req.params[0]));
+  const post = M.db.posts.get(Number(req.params[0]));
   if (!post) return next();
   if (post.author_id !== req.user.id) {
     return res.status(403).render('error', { code: 403, message: 'Править можно только свои записи.' });
@@ -181,19 +181,19 @@ router.get(/^\/post\/(\d+)\/edit$/, requireAuth, (req, res, next) => {
 });
 
 router.post(/^\/post\/(\d+)\/edit$/, requireAuth, (req, res, next) => {
-  const post = M.postsQ.byId.get(Number(req.params[0]));
+  const post = M.db.posts.get(Number(req.params[0]));
   if (!post) return next();
   if (post.author_id !== req.user.id) {
     return res.status(403).render('error', { code: 403, message: 'Править можно только свои записи.' });
   }
   const text = trim(req.body.text, publish.MAX_TEXT);
   const hasAttachments = M.loadAttachments('post', post.id).length > 0;
-  if (text || hasAttachments || post.repost_of) M.postsQ.update.run(text, now(), post.id);
+  if (text || hasAttachments || post.repost_of) M.db.posts.update(post.id, { text: text, edited_at: now() });
   res.redirect(backTo(req, '/post/' + post.id));
 });
 
 router.post(/^\/post\/(\d+)\/delete$/, requireAuth, (req, res) => {
-  const post = M.postsQ.byId.get(Number(req.params[0]));
+  const post = M.db.posts.get(Number(req.params[0]));
   const fallback = post
     ? (post.owner_type === 'group' ? '/club' : '/id') + post.owner_id
     : '/feed';
@@ -203,19 +203,19 @@ router.post(/^\/post\/(\d+)\/delete$/, requireAuth, (req, res) => {
 
 /** Закрепить запись наверху стены (как в современном ВК). */
 router.post(/^\/post\/(\d+)\/pin$/, requireAuth, (req, res) => {
-  const post = M.postsQ.byId.get(Number(req.params[0]));
+  const post = M.db.posts.get(Number(req.params[0]));
   const back = backTo(req, '/feed');
   if (!post || !publish.canEditPost(post, req.user)) return res.redirect(back);
 
   const wasPinned = post.pinned;
-  M.postsQ.unpinAll.run(post.owner_type, post.owner_id);
-  if (!wasPinned) M.postsQ.pin.run(post.id);
+  if (wasPinned) M.db.posts.update(post.id, { pinned: 0 });
+  else M.pinPost(post);
   res.redirect(back);
 });
 
 /** Репост на свою стену. */
 router.post(/^\/post\/(\d+)\/repost$/, requireAuth, postLimit, async (req, res) => {
-  const post = M.postsQ.byId.get(Number(req.params[0]));
+  const post = M.db.posts.get(Number(req.params[0]));
   const back = backTo(req, '/feed');
   if (!post) return res.redirect(back);
   if (post.owner_type === 'user' && !M.canSee(req.user.id, M.getUser(post.owner_id), 'profile')) {

@@ -8,6 +8,10 @@ const theme = require('../lib/theme');
 const { backTo } = require('../lib/security');
 
 const router = express.Router();
+
+/** Поиск по подстроке без учёта регистра — вместо LIKE. */
+const matches = (text, needle) =>
+  String(text || '').toLowerCase().includes(String(needle || '').toLowerCase());
 const PER_PAGE = 20;
 
 router.get('/feed', requireAuth, (req, res) => {
@@ -35,9 +39,11 @@ router.get('/search', requireAuth, (req, res) => {
   for (const p of people) statuses[p.id] = M.friendStatus(req.user.id, p.id);
 
   const groups = tab === 'groups'
-    ? db.prepare('SELECT * FROM groups WHERE name LIKE ? OR description LIKE ? ORDER BY name LIMIT 100')
-      .all('%' + q + '%', '%' + q + '%')
-      .map((g) => Object.assign({}, g, { members: M.groupsQ.membersCount.get(g.id).n }))
+    ? db.groups
+      .filter((g) => matches(g.name, q) || matches(g.description, q))
+      .sort((a, b) => String(a.name).localeCompare(String(b.name), 'ru'))
+      .slice(0, 100)
+      .map((g) => Object.assign({}, g, { members: M.groupMembersCount(g.id) }))
     : [];
 
   res.render('search', {
@@ -47,7 +53,7 @@ router.get('/search', requireAuth, (req, res) => {
     statuses,
     posts: tab === 'posts' && q ? M.searchPosts(req.user.id, q, 50) : [],
     groups,
-    total: db.prepare('SELECT COUNT(*) n FROM users').get().n,
+    total: db.users.count(),
   });
 });
 
@@ -59,7 +65,7 @@ router.post('/theme', (req, res) => {
   const next = theme.isTheme(req.body.theme) ? req.body.theme : theme.nextTheme(current);
 
   req.session.theme = next;
-  if (req.user) db.prepare('UPDATE users SET theme = ? WHERE id = ?').run(next, req.user.id);
+  if (req.user) db.users.update(req.user.id, { theme: next });
 
   res.redirect(backTo(req, '/'));
 });
@@ -69,7 +75,7 @@ router.post('/theme', (req, res) => {
  * Стоит последним — сюда доходит только то, что не совпало с обычными адресами.
  */
 router.get(/^\/([a-zA-Z0-9_.]{3,20})$/, requireAuth, (req, res, next) => {
-  const user = M.users.byLogin.get(req.params[0]);
+  const user = M.userByLogin(req.params[0]);
   if (!user) return next();
   res.redirect('/id' + user.id);
 });

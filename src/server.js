@@ -157,7 +157,7 @@ ws.attach(server, sessionParser);
 
 /** Статус «в сети» показываем друзьям сразу, без перезагрузки страницы. */
 ws.onPresence((userId, online) => {
-  db.prepare('UPDATE users SET last_seen = ? WHERE id = ?').run(u.now(), userId);
+  db.users.update(userId, { last_seen: u.now() });
   ws.sendMany(M.friendIds(userId), { kind: 'presence', user_id: userId, online });
 });
 
@@ -185,13 +185,14 @@ server.on('error', (err) => {
 });
 
 server.listen(PORT, HOST, () => {
-  const users = db.prepare('SELECT COUNT(*) n FROM users').get().n;
+  const users = db.users.count();
   console.log('');
   console.log('  ВОнлайне запущен. Пользователей: ' + users);
   console.log('  На этом компьютере:  http://localhost:' + PORT);
   for (const address of localAddresses()) {
     console.log('  Друзьям в локалке:   http://' + address + ':' + PORT);
   }
+  console.log('  Сеть RetroCore:      ' + retrocore.status().text);
   if (!media.ffmpegAvailable()) {
     console.log('');
     console.log('  ffmpeg не найден: видео примут, но без обложки и длительности.');

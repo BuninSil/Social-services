@@ -12,6 +12,7 @@ const crypto = require('crypto');
 const express = require('express');
 const db = require('../db');
 const rc = require('../lib/retrocore');
+const M = require('../lib/models');
 const { hashPassword } = require('../lib/auth');
 const { now } = require('../lib/util');
 const { rateLimit, safePath } = require('../lib/security');
@@ -102,7 +103,7 @@ function pickLogin(rcUser) {
 
   let login = base.slice(0, 20);
   let attempt = 0;
-  while (db.prepare('SELECT 1 x FROM users WHERE login = ? COLLATE NOCASE').get(login)) {
+  while (M.userByLogin(login)) {
     attempt += 1;
     const suffix = attempt === 1 ? String(rcUser.id) : rcUser.id + '_' + attempt;
     login = base.slice(0, 20 - suffix.length) + suffix;
@@ -113,13 +114,16 @@ function pickLogin(rcUser) {
 
 /** Первый вход заводит страницу, последующие — обновляют данные из сети. */
 function upsert(rcUser) {
-  const existing = db.prepare('SELECT * FROM users WHERE rc_id = ?').get(rcUser.id);
+  const existing = db.users.find({ rc_id: rcUser.id });
   if (existing) {
-    db.prepare(`
-      UPDATE users SET rc_username = ?, rc_avatar = ?, rc_profile = ?, rc_role = ?, last_seen = ?
-      WHERE id = ?
-    `).run(rcUser.username, rcUser.avatar, rcUser.profile, rcUser.roleName || rcUser.role, now(), existing.id);
-    const fresh = db.prepare('SELECT * FROM users WHERE id = ?').get(existing.id);
+    db.users.update(existing.id, {
+      rc_username: rcUser.username,
+      rc_avatar: rcUser.avatar,
+      rc_profile: rcUser.profile,
+      rc_role: rcUser.roleName || rcUser.role,
+      last_seen: now(),
+    });
+    const fresh = db.users.get(existing.id);
     fresh.fresh = false;
     return fresh;
   }
@@ -129,21 +133,26 @@ function upsert(rcUser) {
   // Пароля у страницы нет: кладём случайный хеш, чтобы обычный вход не сработал.
   const stub = hashPassword(crypto.randomBytes(32).toString('hex'));
 
-  const created = db.transaction(() => {
-    const info = db.prepare(`
-      INSERT INTO users (login, password_hash, first_name, last_name, sex, status,
-                         created_at, last_seen, rc_id, rc_username, rc_avatar, rc_profile, rc_role, rc_only)
-      VALUES (?, ?, ?, '', 'm', ?, ?, ?, ?, ?, ?, ?, ?, 1)
-    `).run(login, stub, firstName, rcUser.statusMsg || '', now(), now(),
-      rcUser.id, rcUser.username, rcUser.avatar, rcUser.profile, rcUser.roleName || rcUser.role);
+  const user = db.users.insert({
+    login: login,
+    password_hash: stub,
+    first_name: firstName,
+    status: rcUser.statusMsg || '',
+    created_at: now(),
+    last_seen: now(),
+    rc_id: rcUser.id,
+    rc_username: rcUser.username,
+    rc_avatar: rcUser.avatar,
+    rc_profile: rcUser.profile,
+    rc_role: rcUser.roleName || rcUser.role,
+    rc_only: 1,
+  });
 
-    db.prepare("INSERT INTO albums (owner_type, owner_id, title, created_at) VALUES ('user', ?, ?, ?)")
-      .run(info.lastInsertRowid, 'Фотографии со страницы', now());
+  db.albums.insert({
+    owner_type: 'user', owner_id: user.id, title: 'Фотографии со страницы', created_at: now(),
+  });
+  db.save();
 
-    return info.lastInsertRowid;
-  })();
-
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(created);
   user.fresh = true;
   return user;
 }

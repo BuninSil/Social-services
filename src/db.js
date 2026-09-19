@@ -4,364 +4,104 @@
 require('./lib/env');
 
 const path = require('path');
-const fs = require('fs');
-const Database = require('better-sqlite3');
+const store = require('./lib/store');
 
 const DATA_DIR = process.env.VO_DATA_DIR || path.join(__dirname, '..', 'data');
-fs.mkdirSync(DATA_DIR, { recursive: true });
-
-const db = new Database(path.join(DATA_DIR, 'vonline.db'));
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
-
-/* ------------------------------------------------------------------ схема */
-
-db.exec(`
-CREATE TABLE IF NOT EXISTS users (
-  id            INTEGER PRIMARY KEY AUTOINCREMENT,
-  login         TEXT NOT NULL UNIQUE,
-  password_hash TEXT NOT NULL,
-  first_name    TEXT NOT NULL,
-  last_name     TEXT NOT NULL,
-  sex           TEXT NOT NULL DEFAULT 'm',
-  status        TEXT NOT NULL DEFAULT '',
-  avatar        TEXT,
-  bday          TEXT NOT NULL DEFAULT '',
-  city          TEXT NOT NULL DEFAULT '',
-  hometown      TEXT NOT NULL DEFAULT '',
-  relationship  TEXT NOT NULL DEFAULT '',
-  politics      TEXT NOT NULL DEFAULT '',
-  worldview     TEXT NOT NULL DEFAULT '',
-  activity      TEXT NOT NULL DEFAULT '',
-  interests     TEXT NOT NULL DEFAULT '',
-  music         TEXT NOT NULL DEFAULT '',
-  films         TEXT NOT NULL DEFAULT '',
-  tv            TEXT NOT NULL DEFAULT '',
-  books         TEXT NOT NULL DEFAULT '',
-  games         TEXT NOT NULL DEFAULT '',
-  quotes        TEXT NOT NULL DEFAULT '',
-  about         TEXT NOT NULL DEFAULT '',
-  wall_who      TEXT NOT NULL DEFAULT 'all',
-  created_at    INTEGER NOT NULL,
-  last_seen     INTEGER NOT NULL DEFAULT 0
-);
-
-CREATE TABLE IF NOT EXISTS friendships (
-  from_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  to_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  status     TEXT NOT NULL DEFAULT 'pending',
-  created_at INTEGER NOT NULL,
-  PRIMARY KEY (from_id, to_id)
-);
-CREATE INDEX IF NOT EXISTS idx_friend_to ON friendships(to_id, status);
-
-CREATE TABLE IF NOT EXISTS groups (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  name        TEXT NOT NULL,
-  description TEXT NOT NULL DEFAULT '',
-  kind        TEXT NOT NULL DEFAULT 'group',
-  avatar      TEXT,
-  creator_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  created_at  INTEGER NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS group_members (
-  group_id  INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
-  user_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  role      TEXT NOT NULL DEFAULT 'member',
-  joined_at INTEGER NOT NULL,
-  PRIMARY KEY (group_id, user_id)
-);
-
-CREATE TABLE IF NOT EXISTS posts (
-  id         INTEGER PRIMARY KEY AUTOINCREMENT,
-  owner_type TEXT NOT NULL,
-  owner_id   INTEGER NOT NULL,
-  author_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  text       TEXT NOT NULL,
-  photo_id   INTEGER,
-  audio_id   INTEGER,
-  created_at INTEGER NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_posts_owner ON posts(owner_type, owner_id, id DESC);
-CREATE INDEX IF NOT EXISTS idx_posts_author ON posts(author_id, id DESC);
-
-CREATE TABLE IF NOT EXISTS comments (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  target_type TEXT NOT NULL,
-  target_id   INTEGER NOT NULL,
-  author_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  text        TEXT NOT NULL,
-  created_at  INTEGER NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_comments_target ON comments(target_type, target_id, id);
-
-CREATE TABLE IF NOT EXISTS likes (
-  target_type TEXT NOT NULL,
-  target_id   INTEGER NOT NULL,
-  user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  created_at  INTEGER NOT NULL,
-  PRIMARY KEY (target_type, target_id, user_id)
-);
-
-CREATE TABLE IF NOT EXISTS albums (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  owner_type  TEXT NOT NULL DEFAULT 'user',
-  owner_id    INTEGER NOT NULL,
-  title       TEXT NOT NULL,
-  description TEXT NOT NULL DEFAULT '',
-  created_at  INTEGER NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS photos (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  album_id    INTEGER REFERENCES albums(id) ON DELETE CASCADE,
-  owner_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  file        TEXT NOT NULL,
-  thumb       TEXT NOT NULL,
-  description TEXT NOT NULL DEFAULT '',
-  created_at  INTEGER NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_photos_album ON photos(album_id, id DESC);
-
-CREATE TABLE IF NOT EXISTS audios (
-  id         INTEGER PRIMARY KEY AUTOINCREMENT,
-  owner_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  artist     TEXT NOT NULL,
-  title      TEXT NOT NULL,
-  file       TEXT NOT NULL,
-  created_at INTEGER NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS sessions (
-  sid     TEXT PRIMARY KEY,
-  data    TEXT NOT NULL,
-  expires INTEGER NOT NULL
-);
-
-/* ---- вторая версия: медиа, беседы, уведомления, приватность ---- */
-
-CREATE TABLE IF NOT EXISTS videos (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  owner_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  title       TEXT NOT NULL DEFAULT '',
-  description TEXT NOT NULL DEFAULT '',
-  file        TEXT NOT NULL,
-  poster      TEXT,
-  duration    INTEGER NOT NULL DEFAULT 0,
-  size        INTEGER NOT NULL DEFAULT 0,
-  created_at  INTEGER NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_videos_owner ON videos(owner_id, id DESC);
-
-CREATE TABLE IF NOT EXISTS docs (
-  id         INTEGER PRIMARY KEY AUTOINCREMENT,
-  owner_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  name       TEXT NOT NULL,
-  file       TEXT NOT NULL,
-  ext        TEXT NOT NULL DEFAULT '',
-  size       INTEGER NOT NULL DEFAULT 0,
-  created_at INTEGER NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_docs_owner ON docs(owner_id, id DESC);
-
--- Вложения записей и сообщений. kind: photo | video | audio | doc | voice
-CREATE TABLE IF NOT EXISTS attachments (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  parent_type TEXT NOT NULL,
-  parent_id   INTEGER NOT NULL,
-  kind        TEXT NOT NULL,
-  ref_id      INTEGER,
-  file        TEXT,
-  meta        TEXT NOT NULL DEFAULT '{}',
-  position    INTEGER NOT NULL DEFAULT 0
-);
-CREATE INDEX IF NOT EXISTS idx_attach_parent ON attachments(parent_type, parent_id, position);
-
-CREATE TABLE IF NOT EXISTS conversations (
-  id         INTEGER PRIMARY KEY AUTOINCREMENT,
-  kind       TEXT NOT NULL DEFAULT 'dm',
-  title      TEXT NOT NULL DEFAULT '',
-  avatar     TEXT,
-  creator_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-  created_at INTEGER NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS conversation_members (
-  conv_id      INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-  user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  role         TEXT NOT NULL DEFAULT 'member',
-  joined_at    INTEGER NOT NULL,
-  last_read_id INTEGER NOT NULL DEFAULT 0,
-  left_at      INTEGER,
-  PRIMARY KEY (conv_id, user_id)
-);
-CREATE INDEX IF NOT EXISTS idx_conv_members_user ON conversation_members(user_id);
-
-CREATE TABLE IF NOT EXISTS notifications (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  kind        TEXT NOT NULL,
-  actor_id    INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  target_type TEXT NOT NULL DEFAULT '',
-  target_id   INTEGER NOT NULL DEFAULT 0,
-  url         TEXT NOT NULL DEFAULT '',
-  preview     TEXT NOT NULL DEFAULT '',
-  is_read     INTEGER NOT NULL DEFAULT 0,
-  created_at  INTEGER NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, id DESC);
-
-CREATE TABLE IF NOT EXISTS blocks (
-  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  blocked_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  created_at INTEGER NOT NULL,
-  PRIMARY KEY (user_id, blocked_id)
-);
-`);
-
-/* -------------------------------------------------------------- миграции */
-
-function columns(table) {
-  return db.prepare('PRAGMA table_info(' + table + ')').all().map((c) => c.name);
-}
-
-function addColumn(table, name, definition) {
-  if (!columns(table).includes(name)) {
-    db.exec('ALTER TABLE ' + table + ' ADD COLUMN ' + name + ' ' + definition);
-  }
-}
-
-// Оформление: выбранная тема и свои цвета для неоновой
-addColumn('users', 'theme', "TEXT NOT NULL DEFAULT 'vo'");
-addColumn('users', 'neon_c1', "TEXT NOT NULL DEFAULT '#2fe0ff'");
-addColumn('users', 'neon_c2', "TEXT NOT NULL DEFAULT '#ff4ecd'");
-addColumn('users', 'neon_bg', "TEXT NOT NULL DEFAULT '#070b16'");
-
-// Приватность и профиль
-addColumn('users', 'profile_who', "TEXT NOT NULL DEFAULT 'all'");
-addColumn('users', 'photos_who', "TEXT NOT NULL DEFAULT 'all'");
-addColumn('users', 'audio_who', "TEXT NOT NULL DEFAULT 'all'");
-addColumn('users', 'friends_who', "TEXT NOT NULL DEFAULT 'all'");
-addColumn('users', 'message_who', "TEXT NOT NULL DEFAULT 'all'");
-
-// Записи: редактирование, закрепление, репосты
-addColumn('posts', 'edited_at', 'INTEGER');
-addColumn('posts', 'pinned', 'INTEGER NOT NULL DEFAULT 0');
-addColumn('posts', 'repost_of', 'INTEGER');
-
-// Комментарии: редактирование и ответы
-addColumn('comments', 'edited_at', 'INTEGER');
-addColumn('comments', 'reply_to', 'INTEGER');
-
-// Вход через сеть RetroCore: свой аккаунт сети вместо логина с паролем
-addColumn('users', 'rc_id', 'INTEGER');
-addColumn('users', 'rc_username', "TEXT NOT NULL DEFAULT ''");
-addColumn('users', 'rc_avatar', "TEXT NOT NULL DEFAULT ''");
-addColumn('users', 'rc_profile', "TEXT NOT NULL DEFAULT ''");
-addColumn('users', 'rc_role', "TEXT NOT NULL DEFAULT ''");
-// Пароля у такой страницы нет: в password_hash лежит случайный мусор,
-// подобрать который нельзя, а завести свой пароль можно в настройках.
-addColumn('users', 'rc_only', 'INTEGER NOT NULL DEFAULT 0');
-db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_rc ON users(rc_id) WHERE rc_id IS NOT NULL');
-
-// Медиа: размеры и длительность
-addColumn('photos', 'width', 'INTEGER NOT NULL DEFAULT 0');
-addColumn('photos', 'height', 'INTEGER NOT NULL DEFAULT 0');
-addColumn('photos', 'size', 'INTEGER NOT NULL DEFAULT 0');
-addColumn('audios', 'duration', 'INTEGER NOT NULL DEFAULT 0');
-addColumn('audios', 'size', 'INTEGER NOT NULL DEFAULT 0');
 
 /**
- * Первая версия хранила личные сообщения парой from_id/to_id.
- * Переводим их в беседы, чтобы групповые чаты и диалоги жили в одной модели.
+ * Что храним. Ключ — имя коллекции (и файла data/<имя>.json),
+ * defaults — чем добиваются поля, которых не передали при создании.
+ * Это замена «DEFAULT» из схемы: остальной код рассчитывает, что поля есть
+ * всегда, а не иногда.
  */
-function migrateMessagesToConversations() {
-  const cols = columns('messages');
-  if (cols.length && !cols.includes('to_id')) return; // уже новая форма
+const SCHEMA = {
+  users: {
+    defaults: {
+      login: '', password_hash: '', first_name: '', last_name: '', sex: 'm',
+      status: '', avatar: null, bday: '', city: '', hometown: '', relationship: '',
+      politics: '', worldview: '', activity: '', interests: '', music: '', films: '',
+      tv: '', books: '', games: '', quotes: '', about: '',
+      wall_who: 'all', profile_who: 'all', photos_who: 'all', audio_who: 'all',
+      friends_who: 'all', message_who: 'all',
+      theme: 'vo', neon_c1: '#2fe0ff', neon_c2: '#ff4ecd', neon_bg: '#070b16',
+      rc_id: null, rc_username: '', rc_avatar: '', rc_profile: '', rc_role: '', rc_only: 0,
+      created_at: 0, last_seen: 0,
+    },
+  },
+  friendships: { defaults: { from_id: 0, to_id: 0, status: 'pending', created_at: 0 } },
+  groups: {
+    defaults: {
+      name: '', description: '', kind: 'group', avatar: null, creator_id: 0, created_at: 0,
+    },
+  },
+  group_members: { defaults: { group_id: 0, user_id: 0, role: 'member', joined_at: 0 } },
+  posts: {
+    defaults: {
+      owner_type: 'user', owner_id: 0, author_id: 0, text: '',
+      created_at: 0, edited_at: null, pinned: 0, repost_of: null,
+    },
+  },
+  comments: {
+    defaults: {
+      target_type: 'post', target_id: 0, author_id: 0, text: '',
+      created_at: 0, edited_at: null, reply_to: null,
+    },
+  },
+  likes: { defaults: { target_type: 'post', target_id: 0, user_id: 0, created_at: 0 } },
+  albums: {
+    defaults: { owner_type: 'user', owner_id: 0, title: '', description: '', created_at: 0 },
+  },
+  photos: {
+    defaults: {
+      album_id: null, owner_id: 0, file: '', thumb: '', description: '',
+      width: 0, height: 0, size: 0, created_at: 0,
+    },
+  },
+  videos: {
+    defaults: {
+      owner_id: 0, title: '', description: '', file: '', poster: null,
+      duration: 0, size: 0, created_at: 0,
+    },
+  },
+  audios: {
+    defaults: { owner_id: 0, artist: '', title: '', file: '', duration: 0, size: 0, created_at: 0 },
+  },
+  docs: {
+    defaults: { owner_id: 0, name: '', file: '', ext: '', size: 0, created_at: 0 },
+  },
+  attachments: {
+    defaults: {
+      parent_type: 'post', parent_id: 0, kind: 'photo', ref_id: null,
+      file: null, meta: '{}', position: 0,
+    },
+  },
+  conversations: {
+    defaults: { kind: 'dm', title: '', avatar: null, creator_id: null, created_at: 0 },
+  },
+  conversation_members: {
+    defaults: {
+      conv_id: 0, user_id: 0, role: 'member', joined_at: 0, last_read_id: 0, left_at: null,
+    },
+  },
+  messages: {
+    defaults: {
+      conv_id: 0, from_id: 0, text: '', kind: 'text',
+      created_at: 0, edited_at: null, deleted_at: null,
+    },
+  },
+  notifications: {
+    defaults: {
+      user_id: 0, kind: '', actor_id: null, target_type: '', target_id: 0,
+      url: '', preview: '', is_read: 0, created_at: 0,
+    },
+  },
+  blocks: { defaults: { user_id: 0, blocked_id: 0, created_at: 0 } },
+  sessions: { defaults: { data: '', expires: 0 } },
+};
 
-  const hadOld = cols.includes('to_id');
-  if (hadOld) db.exec('ALTER TABLE messages RENAME TO messages_v1');
+const db = store.open(DATA_DIR, SCHEMA);
 
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS messages (
-      id         INTEGER PRIMARY KEY AUTOINCREMENT,
-      conv_id    INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-      from_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      text       TEXT NOT NULL DEFAULT '',
-      kind       TEXT NOT NULL DEFAULT 'text',
-      created_at INTEGER NOT NULL,
-      edited_at  INTEGER,
-      deleted_at INTEGER
-    );
-    CREATE INDEX IF NOT EXISTS idx_messages_conv ON messages(conv_id, id DESC);
-  `);
-
-  if (!hadOld) return;
-
-  const pairs = db.prepare(`
-    SELECT DISTINCT MIN(from_id, to_id) AS a, MAX(from_id, to_id) AS b FROM messages_v1
-  `).all();
-
-  const newConv = db.prepare("INSERT INTO conversations (kind, created_at) VALUES ('dm', ?)");
-  const newMember = db.prepare(
-    'INSERT OR IGNORE INTO conversation_members (conv_id, user_id, joined_at, last_read_id) VALUES (?, ?, ?, 0)');
-  const copy = db.prepare(
-    'INSERT INTO messages (id, conv_id, from_id, text, created_at) VALUES (?, ?, ?, ?, ?)');
-  const setRead = db.prepare(
-    'UPDATE conversation_members SET last_read_id = ? WHERE conv_id = ? AND user_id = ?');
-
-  const move = db.transaction(() => {
-    for (const { a, b } of pairs) {
-      const convId = newConv.run(Date.now() / 1000 | 0).lastInsertRowid;
-      newMember.run(convId, a, Date.now() / 1000 | 0);
-      newMember.run(convId, b, Date.now() / 1000 | 0);
-
-      const rows = db.prepare(`
-        SELECT * FROM messages_v1 WHERE (from_id = ? AND to_id = ?) OR (from_id = ? AND to_id = ?) ORDER BY id
-      `).all(a, b, b, a);
-
-      for (const m of rows) copy.run(m.id, convId, m.from_id, m.text, m.created_at);
-
-      for (const uid of [a, b]) {
-        const lastRead = db.prepare(`
-          SELECT MAX(id) AS id FROM messages_v1
-          WHERE to_id = ? AND from_id = ? AND is_read = 1
-        `).get(uid, uid === a ? b : a);
-        if (lastRead && lastRead.id) setRead.run(lastRead.id, convId, uid);
-      }
-    }
-    db.exec('DROP TABLE messages_v1');
-  });
-  move();
-}
-
-migrateMessagesToConversations();
-
-/** Старые вложения записей (одно фото / одно аудио) переносим в attachments. */
-function migratePostAttachments() {
-  const postCols = columns('posts');
-  if (!postCols.includes('photo_id')) return;
-  const pending = db.prepare(`
-    SELECT id, photo_id, audio_id FROM posts WHERE photo_id IS NOT NULL OR audio_id IS NOT NULL
-  `).all();
-  if (!pending.length) return;
-
-  const insert = db.prepare(`
-    INSERT INTO attachments (parent_type, parent_id, kind, ref_id, position) VALUES ('post', ?, ?, ?, ?)
-  `);
-  const clear = db.prepare('UPDATE posts SET photo_id = NULL, audio_id = NULL WHERE id = ?');
-  const move = db.transaction(() => {
-    for (const post of pending) {
-      let pos = 0;
-      if (post.photo_id) insert.run(post.id, 'photo', post.photo_id, pos++);
-      if (post.audio_id) insert.run(post.id, 'audio', post.audio_id, pos++);
-      clear.run(post.id);
-    }
-  });
-  move();
-}
-
-migratePostAttachments();
+db.DATA_DIR = DATA_DIR;
+db.SCHEMA = SCHEMA;
 
 module.exports = db;

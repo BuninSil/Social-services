@@ -61,9 +61,7 @@ router.post('/settings', requireAuth, (req, res) => {
     values[field] = PRIVACY_VALUES.includes(req.body[field]) ? req.body[field] : 'all';
   }
 
-  const assignments = Object.keys(values).map((k) => k + ' = @' + k).join(', ');
-  db.prepare('UPDATE users SET ' + assignments + ' WHERE id = @id')
-    .run(Object.assign({ id: req.user.id }, values));
+  db.users.update(req.user.id, values);
   res.redirect('/settings?saved=1');
 });
 
@@ -78,7 +76,7 @@ router.post('/settings/avatar', requireAuth,
 
     const saved = await media.saveImage(req.file.buffer, 'avatars', { width: 400, thumb: 200, square: true });
     const old = req.user.avatar;
-    db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(saved.file, req.user.id);
+    db.users.update(req.user.id, { avatar: saved.file });
     if (old) {
       media.removeFile(old);
       media.removeFile(media.thumbOf(old));
@@ -90,7 +88,7 @@ router.post('/settings/avatar/delete', requireAuth, (req, res) => {
   if (req.user.avatar) {
     media.removeFile(req.user.avatar);
     media.removeFile(media.thumbOf(req.user.avatar));
-    db.prepare('UPDATE users SET avatar = NULL WHERE id = ?').run(req.user.id);
+    db.users.update(req.user.id, { avatar: null });
   }
   res.redirect('/settings');
 });
@@ -107,19 +105,18 @@ router.post('/settings/password', requireAuth, passwordLimit, (req, res) => {
   if (problem) return view(req, res, problem);
   if (password !== String(req.body.password2 || '')) return view(req, res, 'Новые пароли не совпадают.');
 
-  db.prepare('UPDATE users SET password_hash = ?, rc_only = 0 WHERE id = ?')
-    .run(hashPassword(password), req.user.id);
+  db.users.update(req.user.id, { password_hash: hashPassword(password), rc_only: 0 });
 
   // Смена пароля выкидывает все прочие сессии — иначе чужой вход останется живым.
   const currentSid = req.sessionID;
-  for (const row of db.prepare('SELECT sid, data FROM sessions').all()) {
-    if (row.sid === currentSid) continue;
+  db.sessions.remove((row) => {
+    if (row.id === currentSid) return false;
     try {
-      if (JSON.parse(row.data).userId === req.user.id) {
-        db.prepare('DELETE FROM sessions WHERE sid = ?').run(row.sid);
-      }
-    } catch (err) { /* повреждённую запись просто пропускаем */ }
-  }
+      return JSON.parse(row.data).userId === req.user.id;
+    } catch (err) {
+      return false; // повреждённую запись просто пропускаем
+    }
+  });
 
   view(req, res, null, 'Пароль изменён. Остальные сеансы завершены.');
 });
@@ -139,8 +136,9 @@ router.post('/settings/theme', requireAuth, (req, res) => {
     bg: theme.color(req.body.neon_bg, defaults.bg),
   };
 
-  db.prepare('UPDATE users SET theme = ?, neon_c1 = ?, neon_c2 = ?, neon_bg = ? WHERE id = ?')
-    .run(chosen, colors.c1, colors.c2, colors.bg, req.user.id);
+  db.users.update(req.user.id, {
+    theme: chosen, neon_c1: colors.c1, neon_c2: colors.c2, neon_bg: colors.bg,
+  });
   req.session.theme = chosen;
 
   res.redirect(backTo(req, '/settings') + '#theme');
@@ -153,24 +151,39 @@ router.post('/settings/delete', requireAuth, (req, res) => {
   }
   const userId = req.user.id;
 
-  const wipe = db.transaction(() => {
-    for (const table of ['photos', 'videos', 'audios', 'docs']) {
-      for (const row of db.prepare('SELECT * FROM ' + table + ' WHERE owner_id = ?').all(userId)) {
+  const wipe = () => {
+    for (const name of ['photos', 'videos', 'audios', 'docs']) {
+      for (const row of db[name].filter({ owner_id: userId })) {
         media.removeFile(row.file);
         if (row.thumb) media.removeFile(row.thumb);
         if (row.poster) media.removeFile(row.poster);
       }
+      db[name].remove({ owner_id: userId });
     }
     if (req.user.avatar) {
       media.removeFile(req.user.avatar);
       media.removeFile(media.thumbOf(req.user.avatar));
     }
-    db.prepare('DELETE FROM likes WHERE user_id = ?').run(userId);
-    db.prepare('DELETE FROM notifications WHERE user_id = ? OR actor_id = ?').run(userId, userId);
-    db.prepare("DELETE FROM posts WHERE author_id = ? OR (owner_type = 'user' AND owner_id = ?)")
-      .run(userId, userId);
-    db.prepare('DELETE FROM users WHERE id = ?').run(userId);
-  });
+    // Всё, что цепляется за страницу: без внешних ключей убираем руками.
+    db.likes.remove({ user_id: userId });
+    db.notifications.remove((n) => n.user_id === userId || n.actor_id === userId);
+    db.comments.remove({ author_id: userId });
+    db.albums.remove({ owner_type: 'user', owner_id: userId });
+    db.friendships.remove((f) => f.from_id === userId || f.to_id === userId);
+    db.blocks.remove((b) => b.user_id === userId || b.blocked_id === userId);
+    db.group_members.remove({ user_id: userId });
+    db.conversation_members.remove({ user_id: userId });
+    db.messages.remove({ from_id: userId });
+    for (const post of db.posts.filter((p) =>
+      p.author_id === userId || (p.owner_type === 'user' && p.owner_id === userId))) {
+      db.attachments.remove({ parent_type: 'post', parent_id: post.id });
+      db.comments.remove({ target_type: 'post', target_id: post.id });
+      db.likes.remove({ target_type: 'post', target_id: post.id });
+      db.posts.remove(post.id);
+    }
+    db.users.remove(userId);
+    db.save();
+  };
   wipe();
 
   req.session.destroy(() => res.redirect('/'));

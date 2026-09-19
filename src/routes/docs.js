@@ -14,35 +14,40 @@ const { uploadThen, rateLimit, backTo } = require('../lib/security');
 const router = express.Router();
 const uploadLimit = rateLimit('upload', 3600000, 200, 'Слишком много загрузок за час. Подождите.');
 
-const listOf = db.prepare('SELECT * FROM docs WHERE owner_id = ? ORDER BY id DESC');
+const listOf = (ownerId) => db.docs.filter({ owner_id: ownerId }).sort((a, b) => b.id - a.id);
 
 router.get('/docs', requireAuth, (req, res) => {
-  res.render('docs', { docs: listOf.all(req.user.id), error: null });
+  res.render('docs', { docs: listOf(req.user.id), error: null });
 });
 
 router.post('/docs/upload', requireAuth, uploadLimit,
   uploadThen(media.uploadAny.single('doc')), (req, res) => {
     if (!req.file) {
-      return res.render('docs', { docs: listOf.all(req.user.id), error: 'Выберите файл.' });
+      return res.render('docs', { docs: listOf(req.user.id), error: 'Выберите файл.' });
     }
     const type = media.detectDoc(req.file.buffer, req.file.originalname, req.file.mimetype);
     if (!type) {
       return res.render('docs', {
-        docs: listOf.all(req.user.id),
+        docs: listOf(req.user.id),
         error: 'Такой тип файла не поддерживается. Можно изображения, аудио, видео, PDF, архивы и текст.',
       });
     }
     if (req.file.buffer.length > media.LIMITS.doc) {
       return res.render('docs', {
-        docs: listOf.all(req.user.id),
+        docs: listOf(req.user.id),
         error: 'Файл больше ' + media.humanSize(media.LIMITS.doc) + '.',
       });
     }
 
     const saved = media.saveDoc(req.file.buffer, type);
-    db.prepare('INSERT INTO docs (owner_id, name, file, ext, size, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(req.user.id, attach.cleanName(req.file.originalname), saved.file,
-        type.ext.replace('.', ''), saved.size, now());
+    db.docs.insert({
+      owner_id: req.user.id,
+      name: attach.cleanName(req.file.originalname),
+      file: saved.file,
+      ext: type.ext.replace('.', ''),
+      size: saved.size,
+      created_at: now(),
+    });
 
     res.redirect('/docs');
   });
@@ -53,13 +58,11 @@ router.post('/docs/upload', requireAuth, uploadLimit,
  */
 router.get(/^\/doc(\d+)_(\d+)$/, requireAuth, (req, res, next) => {
   const ownerId = Number(req.params[0]);
-  const doc = M.docsQ.byId.get(Number(req.params[1]));
+  const doc = M.db.docs.get(Number(req.params[1]));
   if (!doc || doc.owner_id !== ownerId) return next();
 
   const owner = M.getUser(ownerId);
-  const shared = db.prepare(`
-    SELECT 1 x FROM attachments WHERE kind = 'doc' AND ref_id = ? LIMIT 1
-  `).get(doc.id);
+  const shared = db.attachments.has({ kind: 'doc', ref_id: doc.id });
   if (req.user.id !== doc.owner_id && !shared && !M.canSee(req.user.id, owner, 'profile')) {
     return res.status(403).render('error', { code: 403, message: 'Документ недоступен.' });
   }
@@ -73,11 +76,11 @@ router.get(/^\/doc(\d+)_(\d+)$/, requireAuth, (req, res, next) => {
 });
 
 router.post(/^\/doc\/(\d+)\/delete$/, requireAuth, (req, res) => {
-  const doc = M.docsQ.byId.get(Number(req.params[0]));
+  const doc = M.db.docs.get(Number(req.params[0]));
   if (doc && doc.owner_id === req.user.id) {
     media.removeFile(doc.file);
-    db.prepare("DELETE FROM attachments WHERE kind = 'doc' AND ref_id = ?").run(doc.id);
-    db.prepare('DELETE FROM docs WHERE id = ?').run(doc.id);
+    db.attachments.remove({ kind: 'doc', ref_id: doc.id });
+    db.docs.remove(doc.id);
   }
   res.redirect(backTo(req, '/docs'));
 });
