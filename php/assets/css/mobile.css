@@ -1,0 +1,373 @@
+/* ВОнлайне — поведение на узких экранах.
+   Файл подключается после темы и общий для всех оформлений: разметка у них
+   одна, поэтому правила ниже одинаково работают и в светлой, и в неоновой.
+   Десктопный вид не трогаем — всё живёт внутри медиазапросов. */
+
+/* Общее для любой ширины: ничто не должно распирать страницу. */
+html { -webkit-text-size-adjust: 100%; }
+/* Длинная ссылка без пробелов не должна растягивать колонку. */
+#page, #header_in { overflow-wrap: break-word; }
+img, video, audio, iframe { max-width: 100%; }
+.att_video video, .att_audio audio, .att_voice audio { max-width: 100%; }
+
+/* ------------------------------------------------------------------------ */
+/* Планшеты и узкие окна: колонка перестаёт быть фиксированной               */
+/* ------------------------------------------------------------------------ */
+
+@media (max-width: 920px) {
+  #page, #header_in, #footer {
+    width: auto;
+    max-width: 960px;
+    margin: 0 auto;
+    padding-left: 10px;
+    padding-right: 10px;
+    box-sizing: border-box;
+  }
+  #header_in { padding-left: 0; padding-right: 0; }
+  #header_in, #page, #footer { max-width: 100%; }
+
+  #content, #profile_right { min-width: 0; }
+  .att_photos img, .att_photos img.single { max-width: 100%; height: auto; }
+
+  /* Поле записи: «Прикрепить» стоит справа флоатом и на узкой колонке
+     уезжает за край — поэтому подвал формы становится флексом. */
+  .wall_form textarea, #send_form textarea {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 60px;
+  }
+  .wall_form .wf_foot, #send_form .sf_foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    align-items: center;
+  }
+  .attach_box { float: none; max-width: none; text-align: left; flex: 1 1 260px; }
+  .attach_label { margin-left: 0; display: block; }
+  .attach_box .small { white-space: normal; display: block; padding-top: 3px; }
+}
+
+/* ------------------------------------------------------------------------ */
+/* Телефон: одна колонка, меню лентой, крупные цели для пальца              */
+/* ------------------------------------------------------------------------ */
+
+@media (max-width: 700px) {
+  body { font-size: 13px; line-height: 18px; }
+  input, textarea, select, button { font-size: 13px; }
+
+  /* Шрифт полей от 16px — иначе Safari зумит страницу при фокусе. */
+  input.text, textarea.text, select.text, #head_search input.head_q { font-size: 16px; }
+
+  /* ---------------------------------------------------------------- шапка */
+
+  #header { position: sticky; top: 0; z-index: 30; }
+  #header_in {
+    height: auto;
+    min-height: 44px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    padding: 6px 10px;
+    padding-top: calc(6px + env(safe-area-inset-top, 0px));
+  }
+  #logo {
+    float: none;
+    height: auto;
+    line-height: 22px;
+    margin: 0;
+    font-size: 17px;
+    white-space: nowrap;
+  }
+  #head_nav {
+    float: none;
+    height: auto;
+    line-height: 22px;
+    margin: 0 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  #head_nav .sep { display: none; }
+  #head_nav a, #head_nav .link_btn { margin: 0; }
+  #head_nav .theme_btn { font-size: 16px; line-height: 22px; padding: 0 2px; }
+  /* Имя пользователя в шапке телефона лишнее — левое меню и так рядом. */
+  #head_nav > a:first-child { display: none; }
+  #head_search {
+    float: none;
+    order: 5;
+    flex: 1 1 100%;
+    margin: 0;
+  }
+  #head_search input.head_q { width: 100%; box-sizing: border-box; padding: 7px 8px 7px 22px; }
+
+  /* --------------------------------------------------------------- каркас */
+
+  #side, #content, #content_wide {
+    float: none;
+    width: auto;
+    margin: 0;
+    position: static;
+  }
+  #page { padding-top: 8px; }
+  #content { margin-top: 10px; }
+
+  /* Меню — прокручиваемая лента под шапкой, а не колонка на весь экран. */
+  #side .me { display: none; }
+  ul#left_menu {
+    display: flex;
+    gap: 4px;
+    margin: 0 -10px 4px;
+    padding: 0 10px 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  ul#left_menu::-webkit-scrollbar { display: none; }
+  ul#left_menu li { flex: 0 0 auto; }
+  ul#left_menu li a {
+    white-space: nowrap;
+    padding: 8px 12px;
+    font-size: 13px;
+    line-height: 18px;
+    border-bottom: 0;
+    border-radius: 6px;
+  }
+  ul#left_menu li a {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  /* В разметке счётчик стоит перед названием — на десктопе его уносит float. */
+  ul#left_menu li a .cnt { float: none; order: 2; margin: 0; }
+  ul#left_menu li a .menu_edit { display: none; }
+  #side .side_note { display: none; }
+
+  /* -------------------------------------------------------------- профиль */
+
+  #profile_left, #profile_right {
+    float: none;
+    width: auto;
+    margin: 0;
+  }
+  #profile_right { margin-top: 12px; }
+
+  /* Аватар и кнопки — рядом, чтобы не съедать весь первый экран. */
+  #profile_left {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  #profile_left .pavatar {
+    width: 128px;
+    flex: 0 0 128px;
+    height: auto;
+  }
+  #profile_left .profile_actions {
+    flex: 1 1 140px;
+    margin-top: 0;
+    min-width: 0;
+  }
+  #profile_left .profile_actions a,
+  #profile_left .profile_actions form.act .link_btn { padding: 9px 4px; }
+  #profile_left > .block { flex: 1 1 100%; }
+
+  .pname { font-size: 16px; line-height: 21px; }
+  .pstatus { font-size: 13px; }
+
+  /* Анкета: подпись над значением, иначе колонки слипаются. */
+  table.pinfo td, table.pinfo td.label {
+    display: block;
+    width: auto;
+    padding: 0;
+  }
+  table.pinfo td.label { color: inherit; opacity: .65; padding-top: 7px; font-size: 12px; }
+  table.pinfo tr.section td { padding-top: 14px; }
+  .counters { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+  .counters a { margin: 0; }
+
+  /* ---------------------------------------------------------------- блоки */
+
+  .page_title { font-size: 13px; padding: 7px 10px; }
+  .page_title .right { float: none; display: block; padding-top: 2px; }
+  .block_head { padding: 8px 10px; font-size: 13px; }
+  .block_body { padding: 10px; }
+  .block_foot { padding: 10px; }
+
+  /* ----------------------------------------------------------------- стена */
+
+  .post { padding: 10px; }
+  .post .ava { width: 42px; }
+  .post .ava img { width: 40px; height: 40px; }
+  .post .body { margin-left: 52px; }
+  .post .ptext { font-size: 13px; line-height: 18px; }
+  .post .pactions { font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+  .post .pactions a, .post .pactions form.act { margin: 0; }
+  .post .pactions a, .post .pactions .link_btn { font-size: 12px; padding: 4px 0; }
+
+  .replies { margin-left: 52px; padding-left: 8px; }
+  .reply .ava img { width: 28px; height: 28px; }
+  .reply .body { margin-left: 36px; }
+  .reply_form { margin-left: 0; }
+  .reply_form textarea { width: 100%; box-sizing: border-box; }
+
+  /* -------------------------------------------------------------- вложения */
+
+  .att_photos .att_photo { margin: 0 4px 4px 0; }
+  .att_photos img { max-width: 46vw; }
+  .att_photos img.single { max-width: 100%; }
+  .att_video video { max-width: 100%; }
+  .att_audio audio, .att_voice audio { width: 100%; }
+  .att_doc { background-position: 0 6px; }
+
+  /* ------------------------------------------------------- списки и беседы */
+
+  .people_row, .dlg_row, .notif, .group_row, .doc_row, .audio_row { padding: 10px; }
+  .people_row .ava, .group_row .ava { width: 48px; }
+  .people_row .ava img, .group_row .ava img,
+  .dlg_row .ava img, .notif .ava img { width: 44px; height: 44px; }
+  .group_row .body { margin-left: 56px; }
+  .dlg_row .body, .notif .body { margin-left: 56px; }
+
+  /* В разметке кнопки идут перед аватаром: без float они бы всплыли наверх,
+     поэтому строка становится флексом и кнопки уезжают в конец. */
+  .people_row { display: flex; flex-wrap: wrap; align-items: flex-start; }
+  .people_row .ava { flex: 0 0 48px; }
+  .people_row .body { flex: 1 1 0; min-width: 0; margin-left: 8px; }
+  .people_row .acts {
+    order: 3;
+    flex: 1 1 100%;
+    float: none;
+    text-align: left;
+    margin: 4px 0 0 56px;
+    padding: 0;
+  }
+  .people_row .acts a, .people_row .acts form.act { display: inline-block; margin: 0 14px 0 0; }
+  .people_row .clear { display: none; }
+
+  /* dvh — чтобы адресная строка браузера не съедала переписку. */
+  #chat { max-height: 60vh; max-height: 60dvh; padding: 10px; }
+  .msg .ava img { width: 28px; height: 28px; }
+  .msg .body { margin-left: 38px; }
+  .msg .msg_acts { visibility: visible; }
+
+  .friend_mini { width: 33.333%; margin: 0 0 10px; }
+  .friend_mini img { width: 64px; height: 64px; }
+
+  /* ---------------------------------------------------------------- формы */
+
+  .form_table, .form_table tbody, .form_table tr, .form_table td { display: block; width: auto; }
+  .form_table td { padding: 0; }
+  .form_table td.label {
+    text-align: left;
+    width: auto;
+    padding: 8px 0 3px;
+    font-size: 12px;
+    opacity: .75;
+  }
+  input.text, textarea.text, select.text { max-width: 100%; box-sizing: border-box; }
+  input.text:not([size]), textarea.text, select.text { width: 100%; }
+  .wide { width: 100%; }
+  .button { padding: 8px 14px; }
+  .button_small { padding: 5px 10px; }
+
+  .theme_option { padding: 6px 0; }
+  .color_pick { width: 56px; height: 30px; }
+  .member_pick { width: 100%; }
+
+  /* ---------------------------------------------------------- фото и видео */
+
+  /* Плитки: на телефоне вместо float — сетка, иначе справа остаётся дыра. */
+  .block_body:has(> .photo_item),
+  .block_body:has(> .album_item),
+  .block_body:has(> .video_item) {
+    display: grid;
+    gap: 8px;
+  }
+  .block_body:has(> .photo_item) { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .block_body:has(> .album_item),
+  .block_body:has(> .video_item) { grid-template-columns: repeat(2, 1fr); }
+  .block_body:has(> .photo_item) > .clear,
+  .block_body:has(> .album_item) > .clear,
+  .block_body:has(> .video_item) > .clear { display: none; }
+
+  .photo_item, .album_item, .video_item { float: none; width: auto; margin: 0; }
+  .album_item img, .video_item img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    box-sizing: border-box;
+  }
+  .photo_item img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    box-sizing: border-box; /* рамка и padding темы не должны ломать ряд */
+  }
+  #photo_view { padding: 8px; }
+  #photo_view img { max-width: 100%; height: auto; }
+  .photo_nav { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+  /* «Предыдущая / Следующая» лежит в разметке первой — оставляем её отдельной строкой. */
+  .photo_nav .right { float: none; flex: 1 1 100%; margin: 0; }
+  .photo_nav .clear { display: none; }
+
+  /* --------------------------------------------------------------- прочее */
+
+  .tabs { display: flex; overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs a { white-space: nowrap; padding: 8px 12px; }
+
+  /* ------------------------------------------------------ вход и регистрация */
+
+  #auth_page { width: auto; max-width: 420px; margin: 14px auto; }
+  #auth_page h1 { font-size: 20px; }
+  #auth_box { float: none; width: auto; }
+  #auth_about { margin-left: 0; padding-top: 14px; }
+
+  #live_notice {
+    top: auto;
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    left: 10px;
+    right: 10px;
+    max-width: none;
+  }
+
+  #footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+  #footer span[style] { float: none !important; }
+  .theme_pick { margin-left: 0; }
+}
+
+/* ------------------------------------------------------------------------ */
+/* Совсем узкие экраны                                                      */
+/* ------------------------------------------------------------------------ */
+
+@media (max-width: 400px) {
+  #profile_left .pavatar { width: 108px; flex: 0 0 108px; }
+  #profile_left .profile_actions { flex: 1 1 120px; }
+  .friend_mini { width: 50%; }
+  .post .pactions { gap: 4px 10px; }
+  #logo { font-size: 15px; }
+}
+
+/* Телефон боком: экран низкий, липкая шапка съедала бы половину. */
+@media (max-height: 450px) and (max-width: 950px) {
+  #header { position: static; }
+  #chat { max-height: none; }
+}
+
+/* Пальцем по мелким ссылкам не попасть — на сенсорных экранах цели крупнее. */
+@media (max-width: 700px) and (pointer: coarse) {
+  ul#left_menu li a { min-height: 38px; display: flex; align-items: center; }
+  .post .pactions a, .post .pactions .link_btn,
+  .people_row .acts a, .people_row .acts .link_btn { min-height: 32px; display: inline-flex; align-items: center; }
+  .button, .btn, .profile_actions a, .profile_actions .link_btn { min-height: 38px; }
+  .tabs a { min-height: 38px; display: inline-flex; align-items: center; }
+}

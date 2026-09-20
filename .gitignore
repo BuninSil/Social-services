@@ -1,9 +1,15 @@
 node_modules/
 
 # Загрузки и база создаются на ходу (нужные подпапки заводит src/lib/upload.js).
-uploads/*
-!uploads/.gitkeep
-data/
+/uploads/*
+!/uploads/.gitkeep
+/data/
+
+# Версия на PHP: база и загрузки заводятся на ходу, в репозитории только заглушки.
+php/data/*
+!php/data/.htaccess
+php/uploads/*
+!php/uploads/.htaccess
 *.db
 *.db-journal
 *.db-wal
@@ -17,3 +23,4 @@ npm-debug.log*
 dist/
 vonline-site.zip
 vonline-server.zip
+vonline-php.zip

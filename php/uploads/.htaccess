@@ -1,0 +1,14 @@
+# Загруженное — только отдаём, никогда не выполняем.
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+Options -ExecCGI
+AddType text/plain .php .php3 .php4 .php5 .php7 .phtml .pl .py .cgi .sh .html .htm .shtml .svg
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set Content-Security-Policy "sandbox; default-src 'none'"
+</IfModule>

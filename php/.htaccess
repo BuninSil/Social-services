@@ -1,0 +1,23 @@
+# ВОнлайне — всё через index.php, лишнее наружу не отдаём.
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Существующие файлы (картинки, стили, загрузки) отдаём как есть.
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# Если mod_rewrite нет, хотя бы главная откроется.
+DirectoryIndex index.php
+
+# Папки с данными и кодом закрыты для прямого обращения.
+RedirectMatch 404 ^/(data|app|tools)(/|$)
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>
