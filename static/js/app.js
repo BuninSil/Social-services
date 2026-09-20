@@ -104,6 +104,12 @@
 
   function renderChrome() {
     var nav = document.body.dataset.nav || '';
+
+    // Без связи с сетью показывать участников неоткуда — прячем пункт меню.
+    if (!VO.rc.enabled) {
+      var people = $('#left_menu a[data-nav="people"]');
+      if (people && people.parentNode) people.parentNode.remove();
+    }
     $$('#left_menu a').forEach(function (a) {
       if (a.dataset.nav === nav) a.classList.add('sel');
     });
@@ -144,10 +150,19 @@
     var themeName = $('#theme_name');
     if (themeName) themeName.textContent = THEMES[S.user.theme].title;
 
+    applyTitle();
     renderModeLine();
   }
 
   /** Строка в подвале: кто смотрит страницу и как включить правку. */
+  /** Название сайта из js/config.js — шапка, подвал и заголовок вкладки. */
+  function applyTitle() {
+    var name = (window.VO_CONFIG && window.VO_CONFIG.title) || 'ВОнлайне';
+    if (name === 'ВОнлайне') return;
+    $$('.js_site_name').forEach(function (el) { el.textContent = name; });
+    document.title = document.title.replace('ВОнлайне', name);
+  }
+
   function renderModeLine() {
     var box = $('#mode_line');
     if (!box) return;
@@ -366,7 +381,7 @@
 
     // Карточка проекта в профиле участника сети: цифры опубликованной страницы,
     // а не черновиков в браузере — чужие видят именно её.
-    if (owner && VO.rc.available) {
+    if (owner && VO.rc.enabled) {
       var pub = store.published();
       VO.rc.stats({
         'Записей': pub.posts.length,
@@ -1000,9 +1015,10 @@
 
   PAGES.people = function () {
     var box = $('#people_list');
-    if (!VO.rc.available) {
+    if (!VO.rc.enabled) {
       html(box, '<div class="empty">Список участников показывает сеть RetroCore. ' +
-        'Страница открыта не из сети, поэтому показывать нечего.</div>');
+        'Связь с сетью выключена в <b>js/config.js</b> — включите там <b>retrocore: true</b>, ' +
+        'если сайт лежит в самой сети.</div>');
       return;
     }
 

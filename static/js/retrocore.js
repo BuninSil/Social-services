@@ -1,53 +1,79 @@
-/* Связь с сетью RetroCore для загруженного в неё сайта («Вариант А»).
+/* Связь с сетью RetroCore — необязательная.
 
-   Скрипт /connect.js отдаёт сама сеть, и он уже знает, кто открыл страницу:
-   загруженные сайты видны только участникам. Если сайт открыт не из сети
-   (например, файлом с диска), объекта RetroCore просто нет — тогда всё
-   работает по-старому, только без имён и списка людей. */
+   Включается тумблером retrocore в js/config.js. Пока он выключен, этот файл
+   не делает ровным счётом ничего: скрипт сети не подключается, запросов наружу
+   нет, сайт работает как обычная страница.
+
+   Когда включён — подтягивается /connect.js, который отдаёт сама сеть. Он уже
+   знает, кто открыл страницу: загруженные в сеть сайты видны только участникам. */
 (function () {
   'use strict';
 
-  var RC = window.RetroCore || null;
+  var CFG = window.VO_CONFIG || {};
+  var enabled = CFG.retrocore === true;
+  var loading = null;
   var cached = null;
 
+  /** Подключает скрипт сети один раз и отдаёт объект RetroCore (или null). */
+  function api() {
+    if (!enabled) return Promise.resolve(null);
+    if (loading) return loading;
+
+    loading = new Promise(function (resolve) {
+      if (window.RetroCore) return resolve(window.RetroCore);
+      var script = document.createElement('script');
+      script.src = CFG.retrocore_script || '/connect.js';
+      script.onload = function () { resolve(window.RetroCore || null); };
+      script.onerror = function () { resolve(null); };  // сети нет — и ладно
+      document.head.appendChild(script);
+    });
+    return loading;
+  }
+
   function user() {
-    if (!RC || !RC.user) return Promise.resolve(null);
     if (cached) return Promise.resolve(cached);
-    return Promise.resolve(RC.user()).then(function (u) {
-      cached = u && u.username ? u : null;
-      return cached;
+    return api().then(function (rc) {
+      if (!rc || !rc.user) return null;
+      return Promise.resolve(rc.user()).then(function (who) {
+        cached = who && who.username ? who : null;
+        return cached;
+      });
     }).catch(function () { return null; });
   }
 
   function users(params) {
-    if (!RC || !RC.users) return Promise.resolve([]);
-    return Promise.resolve(RC.users(params || {})).then(function (list) {
+    return api().then(function (rc) {
+      if (!rc || !rc.users) return [];
+      return Promise.resolve(rc.users(params || {}));
+    }).then(function (list) {
       return Array.isArray(list) ? list : [];
     }).catch(function () { return []; });
   }
 
   /** Показатели в карточку проекта в профиле участника сети. */
   function stats(obj) {
-    if (!RC || !RC.stats) return;
-    try { RC.stats(obj); } catch (e) { /* сеть не обязана отвечать */ }
+    api().then(function (rc) {
+      if (rc && rc.stats) rc.stats(obj);
+    }).catch(function () { /* сеть не обязана отвечать */ });
   }
 
   /** Событие в ленту активности профиля. */
   function activity(text, link) {
-    if (!RC || !RC.activity) return;
-    try { RC.activity(String(text).slice(0, 200), link); } catch (e) { /* не критично */ }
+    api().then(function (rc) {
+      if (rc && rc.activity) rc.activity(String(text).slice(0, 200), link);
+    }).catch(function () { /* не критично */ });
   }
 
   function profileUrl(login) {
-    if (RC && RC.profileUrl) {
-      try { return RC.profileUrl(login); } catch (e) { /* ниже */ }
+    if (window.RetroCore && window.RetroCore.profileUrl) {
+      try { return window.RetroCore.profileUrl(login); } catch (e) { /* ниже */ }
     }
     return '';
   }
 
   window.VO = window.VO || {};
   window.VO.rc = {
-    available: !!RC,
+    enabled: enabled,
     user: user,
     users: users,
     stats: stats,

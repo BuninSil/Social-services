@@ -341,20 +341,32 @@ ${notice}
   у него просто нет такой возможности, править может только хозяин страницы.</p>
 </div></div>
 
-<div class="block"><div class="block_head">Про сеть RetroCore</div><div class="block_body">
-  <p>Загруженный в сеть сайт знает, кто его открыл: сеть подключает свой скрипт,
-  и страница здоровается по имени, а раздел «Люди сети» показывает участников
-  со ссылками на их профили.</p>
-  <p>Хозяин страницы определяется по имени в сети: если открыл он — появляются кнопки
-  правки. На чужом компьютере можно включить правку вручную ссылкой в самом низу.</p>
+<div class="block"><div class="block_head">Настройки сайта</div><div class="block_body">
+  <p>Всё, что настраивается при заливке, лежит в одном файле — <b>js/config.js</b>.
+  Он открывается обычным блокнотом.</p>
+  <table class="form_table">
+    <tr><td class="label">retrocore</td><td><b>false</b> — сайт живёт сам по себе: никуда
+      не ходит, о сети не знает, раздел «Люди сети» скрыт.<br>
+      <b>true</b> — подключается скрипт сети RetroCore.</td></tr>
+    <tr><td class="label">title</td><td>название сайта в шапке и в заголовках вкладок.</td></tr>
+  </table>
 </div></div>
 
-<div class="block"><div class="block_head">Есть ещё серверная версия</div><div class="block_body">
-  <p>У ВОнлайне есть полная версия на Node.js и SQLite: там настоящие друзья, личные
-  сообщения с мгновенной доставкой, «печатает…», статус «в сети», уведомления и общая
-  лента. Она запускается на своём компьютере и умеет пускать людей по аккаунту RetroCore
-  одной кнопкой. Эта, статическая, — её младшая сестра для случая, когда держать сервер
-  включённым не хочется.</p>
+<div class="block"><div class="block_head">Про сеть RetroCore</div><div class="block_body">
+  <p>При <b>retrocore: true</b> сайт подключает скрипт сети и знает, кто его открыл:
+  здоровается по имени, раздел «Люди сети» показывает участников со ссылками
+  на их профили, а в карточку проекта в профиле хозяина уходят показатели.</p>
+  <p>Хозяин определяется по имени в сети — оно задаётся в настройках, в поле
+  «Имя в сети RetroCore». На чужом компьютере и при выключенной сети правка
+  включается вручную ссылкой в самом низу страницы.</p>
+</div></div>
+
+<div class="block"><div class="block_head">Чего тут нет</div><div class="block_body">
+  <p>Серверного кода нет вовсе, поэтому нет и общей базы: друзей, личных сообщений
+  между людьми, живой ленты и уведомлений. Всё это требует сервера, который принимает
+  и раздаёт чужие записи, а статический хостинг умеет только отдавать файлы.</p>
+  <p>Зато ничего не нужно держать включённым: страница работает всегда, пока лежит
+  на хостинге.</p>
 </div></div>`,
   },
 ];
@@ -400,7 +412,7 @@ ${page.noindex ? '<meta name="robots" content="noindex">\n' : ''}<title>${page.t
 
 <div id="header">
   <div id="header_in">
-    <a id="logo" href="index.html"><span class="logo_box">ВО</span>ВОнлайне</a>
+    <a id="logo" href="index.html"><span class="logo_box">ВО</span><span class="js_site_name">ВОнлайне</span></a>
     <form id="head_search" action="search.html" method="get">
       <input class="head_q" type="text" name="q" placeholder="поиск по странице">
     </form>
@@ -429,12 +441,12 @@ ${page.body}
 </div>
 
 <div id="footer">
-  ВОнлайне &copy; ${YEAR} &middot; сеть для своих
+  <span class="js_site_name">ВОнлайне</span> &copy; ${YEAR} &middot; сеть для своих
   <span class="theme_pick">оформление: <span id="theme_name">Светлая</span></span>
   <span id="mode_line" style="float:right"></span>
 </div>
 
-<script src="/connect.js"></script>
+<script src="js/config.js"></script>
 <script src="js/retrocore.js"></script>
 <script src="js/store.js"></script>
 <script src="js/ui.js"></script>
